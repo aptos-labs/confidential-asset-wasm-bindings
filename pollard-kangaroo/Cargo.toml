@@ -1,0 +1,12 @@
+[package]
+name = "aptos_pollard_kangaroo_wasm"
+edition = "2021"
+
+[dependencies]
+curve25519-dalek-ng = "4"
+wasm-bindgen = "0.2.99"
+getrandom = { version = "0.2", features = ["js"] }
+pollard-kangaroo = { git = "https://github.com/aptos-labs/pollard-kangaroo.git", branch = "main", features = ["table48", "table32"], commit = "c15294602808c6f66744d3d3a943085d6ff26b60" }
+
+[lib]
+crate-type = ["cdylib"]

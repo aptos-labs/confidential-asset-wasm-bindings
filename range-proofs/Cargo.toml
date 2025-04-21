@@ -1,0 +1,16 @@
+[package]
+name = "aptos_rp_wasm"
+edition = "2021"
+
+[dependencies]
+wasm-bindgen = "0.2.93"
+bulletproofs = "4.0.0"
+once_cell = "1.10.0"
+curve25519-dalek-ng = "4"
+merlin = "3"
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3.77"
+zerocopy = "0.7.35"
+
+[lib]
+crate-type = ["cdylib"]
