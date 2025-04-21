@@ -35,7 +35,7 @@ cat <<EOF > "$PACKAGE_JSON"
 {
   "name": "$PKG_NAME",
   "version": "$NEW_VERSION",
-  "description": "Unified bindings for WASM packages",
+  "description": "Unified bindings for confidential asset WASM packages",
   "type": "module",
   "exports": {
 EOF
