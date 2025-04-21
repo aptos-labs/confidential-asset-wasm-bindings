@@ -1,17 +1,21 @@
-# aptos-confidential-asset-wasm-bindings
+# confidential-asset-wasm-bindings
 
 ## Generating WASM Bindings
 
 To generate WASM bindings, follow these steps:
 
-1. Navigate to the `aptos-wasm` folder.
-2. Inside the `aptos-wasm` directory, locate the subdirectories that contain the platform-specific scripts for WASM
+1. Inside the root directory, locate the subdirectories that contain the platform-specific scripts for WASM
    generation.
-3. Run the respective scripts for each platform:
+2. Run the respective scripts for each platform:
 
     - **macOS**: Ensure Docker is installed on your machine, then execute `build-wasm.sh` in each subdirectory.
       ```bash
       ./build-wasm.sh
+      ```
+
+      One-liner for convenience
+      ```bash
+      chmod +x ./range-proofs/build-wasm.sh && ./range-proofs/build-wasm.sh && chmod +x ./pollard-kangaroo/build-wasm.sh && ./pollard-kangaroo/build-wasm.sh
       ```
 
     - **Linux**: Use `wasm-pack` to build the bindings in each subdirectory by running the following command:
@@ -21,7 +25,7 @@ To generate WASM bindings, follow these steps:
 
       Replace `$dir` with the name of the specific subdirectory you are working in.
 
-4. Once WASM bindings have been generated in all subdirectories, you can create a unified package by running the
+3. Once WASM bindings have been generated in all subdirectories, you can create a unified package by running the
    `gen-npm-pkg.sh` script at the root of the project:
     ```bash
     ./gen-npm-pkg.sh
