@@ -1,0 +1,7 @@
+/target
+ios/
+app/
+android/
+.idea/
+pkg/
+aptos-wasm-bindings/
