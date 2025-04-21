@@ -1,4 +1,4 @@
-# aptos-wasm-bindings
+# aptos-confidential-asset-wasm-bindings
 
 ## Generating WASM Bindings
 

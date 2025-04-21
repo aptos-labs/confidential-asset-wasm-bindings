@@ -2,10 +2,10 @@
 
 # Define paths
 BASE_DIR="./"
-OUTPUT_DIR="./aptos-wasm-bindings"
+OUTPUT_DIR="./aptos-confidential-asset-wasm-bindings"
 OUTPUT_FILE="$OUTPUT_DIR/index.d.ts"
 PACKAGE_JSON="$OUTPUT_DIR/package.json"
-PKG_NAME="@aptos-labs/wasm-bindings"
+PKG_NAME="@aptos-labs/confidential-asset-wasm-bindings"
 PKG_VERSION="0.1.0"
 
 # Check and Install Rollup
