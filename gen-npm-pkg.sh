@@ -37,6 +37,10 @@ cat <<EOF > "$PACKAGE_JSON"
   "version": "$NEW_VERSION",
   "description": "Unified bindings for confidential asset WASM packages",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aptos-labs/confidential-asset-wasm-bindings.git"
+  },
   "exports": {
 EOF
 

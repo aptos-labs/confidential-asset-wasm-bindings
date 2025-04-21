@@ -1,8 +1,12 @@
 {
   "name": "@aptos-labs/confidential-asset-wasm-bindings",
-  "version": "0.0.1",
-  "description": "Unified bindings for WASM packages",
+  "version": "0.0.2",
+  "description": "Unified bindings for confidential asset WASM packages",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aptos-labs/confidential-asset-wasm-bindings.git"
+  },
   "exports": {
     "./pollard-kangaroo": {
       "import": "./pollard-kangaroo/aptos_pollard_kangaroo_wasm-esm.js",
