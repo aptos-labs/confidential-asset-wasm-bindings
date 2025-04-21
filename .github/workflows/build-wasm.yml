@@ -1,0 +1,57 @@
+name: "build_wasm"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+
+      - name: Install Wasm-pack
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.15.x"
+
+      - name: Install rollup
+        run: |
+          npm install --global rollup@4.28.1
+
+      - name: Build
+        working-directory: aptos-wasm
+        run: |
+          echo "Directory structure before build:"
+          ls -R
+          for dir in ./*/; do
+            if [ -d "$dir" ]; then
+              echo "Building in directory: $dir"
+              (cd "$dir" && wasm-pack build --release --target web -d pkg) || {
+                echo "Build failed in directory: $dir"
+                exit 1
+              }
+            else
+              echo "No subdirectories found in aptos-wasm"
+            fi
+          done
+
+      - name: Generate npm pkg
+        run: |
+          ls -R ./aptos-wasm
+          chmod +x ./gen-npm-pkg.sh
+          ./gen-npm-pkg.sh
+
+      - name: Publish to npm
+        run: |
+          cd aptos-wasm-bindings
+          ls -R .
+          cat package.json
+          npm pkg fix
+          npm pack
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_ACCESS_TOKEN }}
+          npm publish --access public
