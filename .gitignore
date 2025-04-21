@@ -4,4 +4,3 @@ app/
 android/
 .idea/
 pkg/
-aptos-confidential-asset-wasm-bindings/

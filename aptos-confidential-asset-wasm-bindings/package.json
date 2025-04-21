@@ -1,0 +1,25 @@
+{
+  "name": "@aptos-labs/confidential-asset-wasm-bindings",
+  "version": "0.0.1",
+  "description": "Unified bindings for WASM packages",
+  "type": "module",
+  "exports": {
+    "./pollard-kangaroo": {
+      "import": "./pollard-kangaroo/aptos_pollard_kangaroo_wasm-esm.js",
+      "require": "./pollard-kangaroo/aptos_pollard_kangaroo_wasm-cjs.js",
+      "types": "./pollard-kangaroo/aptos_pollard_kangaroo_wasm.d.ts"
+    },
+    "./range-proofs": {
+      "import": "./range-proofs/aptos_rp_wasm-esm.js",
+      "require": "./range-proofs/aptos_rp_wasm-cjs.js",
+      "types": "./range-proofs/aptos_rp_wasm.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": ["./index.d.ts"],
+      "pollard-kangaroo": ["./pollard-kangaroo/aptos_pollard_kangaroo_wasm.d.ts"],
+      "range-proofs": ["./range-proofs/aptos_rp_wasm.d.ts"]
+    }
+  }
+}
