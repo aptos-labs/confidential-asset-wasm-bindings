@@ -48,7 +48,7 @@ jobs:
 
       - name: Publish to npm
         run: |
-          cd aptos-wasm-bindings
+          cd aptos-confidential-asset-wasm-bindings
           ls -R .
           cat package.json
           npm pkg fix
