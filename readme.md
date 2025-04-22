@@ -4,32 +4,13 @@
 
 To generate WASM bindings, follow these steps:
 
-1. Inside the root directory, locate the subdirectories that contain the platform-specific scripts for WASM
-   generation.
-2. Run the respective scripts for each platform:
+1. Inside the `pollard-kangaroo` and `range-proofs` directories, locate the `build-wasm.sh` script for WASM generation.
+2. Ensure Docker is installed on your machine, then execute `build-wasm.sh` in each subdirectory.
+3. Once WASM bindings have been generated in all subdirectories, you can create a unified package by running the `gen-npm-pkg.sh` script at the root of the project:
 
-    - **macOS**: Ensure Docker is installed on your machine, then execute `build-wasm.sh` in each subdirectory.
-      ```bash
-      ./build-wasm.sh
-      ```
+These steps will generate the npm package with necessary WASM bindings.
 
-      One-liner for convenience
-      ```bash
-      chmod +x ./range-proofs/build-wasm.sh && ./range-proofs/build-wasm.sh && chmod +x ./pollard-kangaroo/build-wasm.sh && ./pollard-kangaroo/build-wasm.sh
-      ```
-
-    - **Linux**: Use `wasm-pack` to build the bindings in each subdirectory by running the following command:
-      ```bash
-      wasm-pack build --release --target web -d "$dir/pkg"
-      ```
-
-      Replace `$dir` with the name of the specific subdirectory you are working in.
-
-3. Once WASM bindings have been generated in all subdirectories, you can create a unified package by running the
-   `gen-npm-pkg.sh` script at the root of the project:
-    ```bash
-    ./gen-npm-pkg.sh
-    ```
-
-These steps will generate the necessary WASM bindings and artifacts for the respective platforms, providing a seamless
-integration experience.
+One-liner for convenience from the root folder
+```bash
+chmod +x ./range-proofs/build-wasm.sh && ./range-proofs/build-wasm.sh && chmod +x ./pollard-kangaroo/build-wasm.sh && ./pollard-kangaroo/build-wasm.sh && ./gen-npm-pkg.sh
+```
