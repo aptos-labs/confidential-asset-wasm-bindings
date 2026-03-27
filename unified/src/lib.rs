@@ -17,6 +17,17 @@
 //! - `bsgs`: Standard Baby-Step Giant-Step
 //! - `bl12`: Bernstein-Lange 2012 (smallest table, slower)
 
-// Placeholder - full implementation will be added in subsequent commits
+use wasm_bindgen::prelude::*;
+
+/// Installs a panic hook that forwards Rust panic messages to `console.error`.
+/// Called automatically on WASM init. Without this, panics surface as an
+/// opaque `RuntimeError: unreachable` with no message.
+#[wasm_bindgen(start)]
+pub fn init() {
+    std::panic::set_hook(Box::new(|info| {
+        web_sys::console::error_1(&format!("{info}").into());
+    }));
+}
+
 pub mod discrete_log;
 pub mod range_proof;
