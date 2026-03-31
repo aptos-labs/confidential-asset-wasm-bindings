@@ -16,6 +16,7 @@ export const discretelogsolver_algorithm: (a: number) => [number, number];
 export const discretelogsolver_max_num_bits: (a: number) => [number, number];
 export const discretelogsolver_new: () => number;
 export const discretelogsolver_solve: (a: number, b: number, c: number, d: number) => [bigint, number, number];
+export const init: () => void;
 export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_export_2: WebAssembly.Table;
