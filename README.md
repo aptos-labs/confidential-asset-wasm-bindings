@@ -1,11 +1,11 @@
-# @aptos-labs/confidential-asset-wasm-bindings
+# @aptos-labs/confidential-asset-bindings
 
-WebAssembly bindings for Aptos confidential asset cryptography. Combines discrete log solving and Bulletproof range proofs into a single WASM module, sharing the `curve25519-dalek` dependency to minimize binary size.
+Bindings for Aptos confidential asset (discrete log + range proofs).
 
 ## Installation
 
 ```bash
-npm install @aptos-labs/confidential-asset-wasm-bindings
+npm install @aptos-labs/confidential-asset-bindings
 ```
 
 ## Usage
@@ -17,11 +17,14 @@ import init, {
   batch_range_proof,
   verify_proof,
   batch_verify_proof,
-} from "@aptos-labs/confidential-asset-wasm-bindings";
+  initializeWasm,
+} from "@aptos-labs/confidential-asset-bindings";
 
 // Initialize WASM module before calling any functions
 await init();
 ```
+
+Node.js consumers do not need to call `initializeWasm()`; the runtime is loaded automatically.
 
 ### Discrete Log
 

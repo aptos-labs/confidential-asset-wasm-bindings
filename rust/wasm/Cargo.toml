@@ -2,7 +2,7 @@
 name = "aptos_confidential_asset_wasm"
 version = "0.1.0"
 edition = "2021"
-description = "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)"
+description = "Unified WASM bindings for Aptos confidential asset (discrete log + range proofs)"
 
 [features]
 default = ["tbsgs_k"]

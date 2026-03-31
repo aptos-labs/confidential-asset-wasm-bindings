@@ -1,10 +1,10 @@
 ---
-"@aptos-labs/confidential-asset-wasm-bindings": minor
+"@aptos-labs/confidential-asset-bindings": minor
 ---
 
-Initial release of `@aptos-labs/confidential-asset-wasm-bindings`.
+Initial release of `@aptos-labs/confidential-asset-bindings`.
 
-This package provides unified WebAssembly bindings for Aptos confidential asset cryptography, combining discrete log solving and Bulletproof range proofs into a single WASM module to minimize binary size by sharing the `curve25519-dalek` dependency.
+This package provides unified bindings for Aptos confidential asset cryptography.
 
 ### Discrete Log Solver
 
@@ -20,5 +20,5 @@ This package provides unified WebAssembly bindings for Aptos confidential asset 
 
 ### Architecture
 
-- Pure Rust core (`aptos_confidential_asset_core`) separated from WASM bindings (`aptos_confidential_asset_wasm`) for reusability
+- Pure Rust core (`aptos_confidential_asset_core`) separated from the WASM runtime crate (`aptos_confidential_asset_wasm`) for reusability
 - Ships ESM and CJS bundles with full TypeScript type definitions

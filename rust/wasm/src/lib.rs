@@ -1,4 +1,4 @@
-//! Unified WASM bindings for Aptos confidential assets.
+//! Unified WASM bindings for Aptos confidential asset.
 //!
 //! This crate combines discrete log solving and range proof functionality
 //! into a single WASM module, reducing overall binary size by sharing

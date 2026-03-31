@@ -1,11 +1,11 @@
 {
-  "name": "@aptos-labs/confidential-asset-wasm-bindings",
+  "name": "@aptos-labs/confidential-asset-bindings",
   "version": "0.1.2",
-  "description": "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)",
+  "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aptos-labs/confidential-asset-wasm-bindings.git"
+    "url": "https://github.com/aptos-labs/confidential-asset-bindings.git"
   },
   "keywords": [
     "aptos",
@@ -17,14 +17,17 @@
   ],
   "files": ["dist"],
   "type": "module",
-  "main": "./dist/aptos_confidential_asset_wasm.cjs",
-  "module": "./dist/aptos_confidential_asset_wasm.js",
-  "types": "./dist/aptos_confidential_asset_wasm.d.ts",
+  "main": "./dist/index.node.cjs",
+  "module": "./dist/index.node.mjs",
+  "browser": "./dist/index.browser.js",
+  "types": "./dist/index.browser.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/aptos_confidential_asset_wasm.js",
-      "require": "./dist/aptos_confidential_asset_wasm.cjs",
-      "types": "./dist/aptos_confidential_asset_wasm.d.ts"
+      "types": "./dist/index.browser.d.ts",
+      "browser": "./dist/index.browser.js",
+      "import": "./dist/index.node.mjs",
+      "require": "./dist/index.node.cjs",
+      "default": "./dist/index.node.mjs"
     },
     "./*.wasm": "./dist/aptos_confidential_asset_wasm_bg.wasm"
   },

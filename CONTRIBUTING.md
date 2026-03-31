@@ -1,5 +1,7 @@
 # Contributing
 
+Contributing to `@aptos-labs/confidential-asset-bindings`.
+
 ## Prerequisites
 
 Install [mise](https://mise.jdx.dev/) to manage tool versions, then run:

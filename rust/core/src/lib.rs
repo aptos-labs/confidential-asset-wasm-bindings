@@ -1,4 +1,4 @@
-//! Pure Rust core logic for Aptos confidential assets.
+//! Pure Rust core logic for Aptos confidential asset.
 //!
 //! This crate contains all crypto/computation logic without any WASM or JS dependencies.
 //! It is intended to be wrapped by `aptos_confidential_asset_wasm` for browser use.
