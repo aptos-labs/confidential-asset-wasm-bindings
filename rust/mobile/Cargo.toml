@@ -1,0 +1,13 @@
+[package]
+name = "aptos_confidential_asset_mobile"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+aptos_confidential_asset_core = { path = "../core" }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", default-features = false }

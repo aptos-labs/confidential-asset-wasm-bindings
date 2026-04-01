@@ -61,3 +61,7 @@ dist/
 
 # Rust
 rust/target/
+
+# Native artifacts
+android/src/main/jniLibs/
+ios/Rust/Binaries/

@@ -27,9 +27,12 @@
   "files": ["dist", "src", "android", "ios", "expo-module.config.json"],
   "scripts": {
     "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm --release",
+    "build:android": "./scripts/build-android.sh",
+    "build:ios": "./scripts/build-ios.sh",
+    "build:bindings": "npm run build:wasm && npm run build:android && npm run build:ios",
     "build:lib": "tsdown",
     "build:expo": "expo-module build -p tsconfig.json --outDir dist",
-    "build": "npm run build:wasm && npm run build:lib && npm run build:expo",
+    "build": "npm run build:bindings && npm run build:lib && npm run build:expo",
     "changeset": "changeset",
     "lint": "expo-module lint",
     "test": "expo-module test",

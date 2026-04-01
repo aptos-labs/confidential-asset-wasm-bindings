@@ -1,37 +1,13 @@
-import { useEvent } from 'expo';
-import ConfidentialAssetBindings, { ConfidentialAssetBindingsView } from '@aptos-labs/confidential-asset-bindings';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { hello } from '@aptos-labs/confidential-asset-bindings';
+import { SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 export default function App() {
-  const onChangePayload = useEvent(ConfidentialAssetBindings, 'onChange');
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.container}>
         <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{ConfidentialAssetBindings.PI}</Text>
-        </Group>
         <Group name="Functions">
-          <Text>{ConfidentialAssetBindings.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await ConfidentialAssetBindings.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <ConfidentialAssetBindingsView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
+          <Text>{hello()}</Text>
         </Group>
       </ScrollView>
     </SafeAreaView>
@@ -65,9 +41,5 @@ const styles = {
   container: {
     flex: 1,
     backgroundColor: '#eee',
-  },
-  view: {
-    flex: 1,
-    height: 200,
   },
 };
