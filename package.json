@@ -2,28 +2,17 @@
   "name": "@aptos-labs/confidential-asset-bindings",
   "version": "0.1.0",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/aptos-labs/confidential-asset-bindings.git"
-  },
-  "keywords": [
-    "aptos",
-    "confidential",
-    "wasm",
-    "bulletproofs",
-    "discrete-log",
-    "range-proof"
-  ],
-  "files": [
-    "dist"
-  ],
-  "type": "module",
   "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "type": "module",
+  "module": "./dist/index.mjs",
+  "react-native": "./dist/index.native.js",
   "exports": {
     ".": {
+      "react-native": {
+        "types": "./dist/index.native.d.ts",
+        "default": "./dist/index.native.js"
+      },
       "import": {
         "types": "./dist/index.d.mts",
         "default": "./dist/index.mjs"
@@ -35,17 +24,52 @@
       "default": "./dist/index.mjs"
     }
   },
+  "files": ["dist", "src", "android", "ios", "expo-module.config.json"],
   "scripts": {
     "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm --release",
-    "build:js": "tsdown",
-    "build": "npm run build:wasm && npm run build:js",
+    "build:lib": "tsdown",
+    "build:expo": "expo-module build -p tsconfig.json --outDir dist",
+    "build": "npm run build:wasm && npm run build:lib && npm run build:expo",
     "changeset": "changeset",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android",
     "release": "npm run build && changeset publish"
   },
+  "keywords": [
+    "aptos",
+    "confidential",
+    "wasm",
+    "bulletproofs",
+    "discrete-log",
+    "range-proof",
+    "react-native",
+    "expo",
+    "@aptos-labs/confidential-asset-bindings",
+    "ConfidentialAssetBindings"
+  ],
+  "repository": "https://github.com/aptos-labs/confidential-asset-bindings",
+  "bugs": {
+    "url": "https://github.com/aptos-labs/confidential-asset-bindings/issues"
+  },
+  "author": "aptoslabs <aptoslabs@aptoslabs.com> (https://github.com/aptos-labs)",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/aptos-labs/confidential-asset-bindings#readme",
+  "dependencies": {},
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
+    "@types/react": "~19.1.1",
+    "expo": "^55.0.11",
+    "expo-module-scripts": "^55.0.2",
+    "react-native": "0.82.1",
     "tsdown": "^0.21.7",
     "typescript": "^5.8.3",
     "wasm-pack": "^0.13.1"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
   }
 }

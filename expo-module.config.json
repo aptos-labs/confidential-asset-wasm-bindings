@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ConfidentialAssetBindingsModule"]
+  },
+  "android": {
+    "modules": ["com.aptoslabs.confidentialassetbindings.ConfidentialAssetBindingsModule"]
+  }
+}
