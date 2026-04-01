@@ -31,7 +31,7 @@ once_cell = "1.10.0"
 clear_on_drop = { version = "0.2.5", features = ["no_cc"] }
 
 # Discrete log
-ristretto255-dlog = { path = "../../../ristretto255-dlog", default-features = false }
+ristretto255-dlog = { git = "https://github.com/aptos-labs/ristretto255-dlog.git", default-features = false }
 
 [dev-dependencies]
 # bulletproofs v4.0.0 for cross-version compatibility testing

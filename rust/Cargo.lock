@@ -618,6 +618,7 @@ dependencies = [
 [[package]]
 name = "ristretto255-dlog"
 version = "0.1.0"
+source = "git+https://github.com/aptos-labs/ristretto255-dlog.git#94c068ad9b9c5e4f89a8bcf79c823867d63564d9"
 dependencies = [
  "anyhow",
  "bincode",

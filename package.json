@@ -31,9 +31,12 @@
   "scripts": {
     "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm/web --release",
     "build:js": "tsdown",
-    "build": "npm run build:wasm && npm run build:js"
+    "build": "npm run build:wasm && npm run build:js",
+    "changeset": "changeset",
+    "release": "npm run build && npm publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "tsdown": "^0.21.7",
     "typescript": "^5.9.3",
     "wasm-pack": "^0.13.1"
