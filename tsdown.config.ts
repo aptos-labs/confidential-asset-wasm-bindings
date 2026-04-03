@@ -10,7 +10,7 @@ const NODE_CONFIG: UserConfig = {
   entry: { "index.node": "src/index.node.ts" },
   format: ["cjs", "esm"],
   platform: "node",
-  copy: ['build/wasm/nodejs/aptos_confidential_asset_wasm_bg.wasm'],
+  copy: ['build/wasm/aptos_confidential_asset_wasm_bg.wasm'],
 };
 
 export default defineConfig([BROWSER_CONFIG, NODE_CONFIG]);

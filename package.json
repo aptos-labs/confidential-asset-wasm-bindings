@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-bindings",
-  "version": "0.8.0",
+  "version": "0.0.3",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "license": "Apache-2.0",
   "repository": {
@@ -39,9 +39,7 @@
     }
   },
   "scripts": {
-    "build:wasm:nodejs": "wasm-pack build ./rust/wasm --target nodejs --out-dir ../../build/wasm/nodejs --release",
-    "build:wasm:web": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm/web --release",
-    "build:wasm": "npm run build:wasm:nodejs && npm run build:wasm:web",
+    "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm --release",
     "build:js": "tsdown",
     "build": "npm run build:wasm && npm run build:js",
     "changeset": "changeset",
