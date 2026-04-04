@@ -1,8 +1,8 @@
 [package]
-name = "aptos_confidential_asset_wasm"
+name = "aptos_confidential_asset_core"
 version = "0.1.0"
 edition = "2021"
-description = "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)"
+description = "Pure Rust core logic for Aptos confidential assets (discrete log + range proofs)"
 
 [features]
 default = ["tbsgs_k"]
@@ -22,12 +22,6 @@ bl12 = ["ristretto255-dlog/bl12_table32"]
 # Shared elliptic curve library (used by both discrete log and range proofs)
 curve25519-dalek = { version = "4", default-features = false }
 
-# WASM bindings
-wasm-bindgen = "0.2.99"
-js-sys = "0.3.77"
-web-sys = { version = "0.3", features = ["console"] }
-getrandom = { version = "0.2", features = ["js"] }
-
 # Range proofs (v5.0.0 uses curve25519-dalek v4, compatible with pollard-kangaroo)
 bulletproofs = "5.0.0"
 merlin = "3"
@@ -37,7 +31,7 @@ once_cell = "1.10.0"
 clear_on_drop = { version = "0.2.5", features = ["no_cc"] }
 
 # Discrete log
-ristretto255-dlog = { path = "../../ristretto255-dlog", default-features = false }
+ristretto255-dlog = { path = "../../../ristretto255-dlog", default-features = false }
 
 [dev-dependencies]
 # bulletproofs v4.0.0 for cross-version compatibility testing
@@ -47,4 +41,4 @@ curve25519-dalek-ng = "4"
 rand = "0.8"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]

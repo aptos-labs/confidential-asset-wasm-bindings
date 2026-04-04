@@ -31,9 +31,9 @@ echo "Generating npm package (version $NEW_VERSION)..."
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-# Copy unified pkg files
+# Copy wasm pkg files
 mkdir -p "$OUTPUT_DIR"
-cp -r unified/pkg/* "$OUTPUT_DIR/"
+cp -r rust/wasm/pkg/* "$OUTPUT_DIR/"
 
 # Remove unnecessary files
 rm -f "$OUTPUT_DIR/package.json"

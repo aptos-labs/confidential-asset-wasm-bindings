@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-wasm-bindings",
-  "version": "0.0.5",
+  "version": "0.1.2",
   "description": "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)",
   "type": "module",
   "repository": {

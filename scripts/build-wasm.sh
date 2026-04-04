@@ -11,11 +11,11 @@ cd "$(dirname "$0")/.."
 echo "Building unified WASM (discrete log + range proofs)..."
 
 # Build with default features (tbsgs_k)
-cd unified
+cd rust/wasm
 wasm-pack build --release --target web
 
 echo ""
-echo "WASM build complete. Files are available in unified/pkg:"
-ls unified/pkg/*.wasm unified/pkg/*.js unified/pkg/*.d.ts 2>/dev/null | xargs -n1 basename
+echo "WASM build complete. Files are available in rust/wasm/pkg:"
+ls pkg/*.wasm pkg/*.js pkg/*.d.ts 2>/dev/null | xargs -n1 basename
 echo ""
 echo "WASM binary size: $(du -h pkg/*.wasm | cut -f1) ($(basename pkg/*.wasm))"

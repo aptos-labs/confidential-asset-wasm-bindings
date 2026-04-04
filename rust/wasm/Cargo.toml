@@ -1,0 +1,31 @@
+[package]
+name = "aptos_confidential_asset_wasm"
+version = "0.1.0"
+edition = "2021"
+description = "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)"
+
+[features]
+default = ["tbsgs_k"]
+
+# Discrete log algorithm selection (only enable one at a time to minimize WASM size)
+# - tbsgs_k (default, recommended): TBSGS-k32 (32-bit) + NaiveTruncatedDoubledLookup (16-bit)
+#   Smallest table (~512 KiB) with good performance.
+# - bsgs_k: BSGS-k32 (32-bit) + NaiveDoubledLookup (16-bit), sharing BSGS-k table (~2 MiB)
+# - bsgs: BSGS (32-bit) + NaiveLookup from BSGS baby_steps (16-bit), sharing BSGS table (~2 MiB)
+# - bl12: BL12 (32-bit + 16-bit) - smallest table (~258 KiB) but slower
+tbsgs_k = ["aptos_confidential_asset_core/tbsgs_k"]
+bsgs_k = ["aptos_confidential_asset_core/bsgs_k"]
+bsgs = ["aptos_confidential_asset_core/bsgs"]
+bl12 = ["aptos_confidential_asset_core/bl12"]
+
+[dependencies]
+aptos_confidential_asset_core = { path = "../core", default-features = false }
+
+# WASM bindings
+wasm-bindgen = "0.2.99"
+js-sys = "0.3.77"
+web-sys = { version = "0.3", features = ["console"] }
+getrandom = { version = "0.2", features = ["js"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]

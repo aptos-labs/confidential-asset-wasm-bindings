@@ -1,13 +1,12 @@
 //! Range proof functionality using Bulletproofs v5.0.0.
 //!
-//! Provides WASM-exportable functions for generating and verifying range proofs.
+//! Provides pure Rust functions for generating and verifying range proofs.
 
 use bulletproofs::{BulletproofGens, PedersenGens, RangeProof};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use once_cell::sync::Lazy;
-use wasm_bindgen::prelude::*;
 
 const MAX_RANGE_BITS: usize = 64;
 
@@ -20,13 +19,11 @@ pub static BULLETPROOF_GENERATORS: Lazy<BulletproofGens> =
     Lazy::new(|| BulletproofGens::new(MAX_RANGE_BITS, 16));
 
 /// Result of a single range proof generation
-#[wasm_bindgen]
 pub struct SingleRangeProof {
-    proof: Vec<u8>,
-    comm: Vec<u8>,
+    pub proof: Vec<u8>,
+    pub comm: Vec<u8>,
 }
 
-#[wasm_bindgen]
 impl SingleRangeProof {
     /// Returns the serialized proof bytes
     pub fn proof(&self) -> Vec<u8> {
@@ -40,13 +37,11 @@ impl SingleRangeProof {
 }
 
 /// Result of a batch range proof generation
-#[wasm_bindgen]
 pub struct BatchRangeProof {
-    proof: Vec<u8>,
-    comms: Vec<js_sys::Uint8Array>,
+    pub proof: Vec<u8>,
+    pub comms: Vec<Vec<u8>>,
 }
 
-#[wasm_bindgen]
 impl BatchRangeProof {
     /// Returns the serialized proof bytes
     pub fn proof(&self) -> Vec<u8> {
@@ -54,7 +49,7 @@ impl BatchRangeProof {
     }
 
     /// Returns the serialized commitments (each 32 bytes)
-    pub fn comms(&self) -> Vec<js_sys::Uint8Array> {
+    pub fn comms(&self) -> Vec<Vec<u8>> {
         self.comms.clone()
     }
 }
@@ -67,33 +62,32 @@ impl BatchRangeProof {
 /// * `val_base` - Value base point for Pedersen commitment (32-byte compressed point)
 /// * `rand_base` - Randomness base point for Pedersen commitment (32-byte compressed point)
 /// * `num_bits` - Bit length for range proof (8, 16, 32, or 64)
-#[wasm_bindgen]
 pub fn range_proof(
     v: u64,
     r: Vec<u8>,
     val_base: Vec<u8>,
     rand_base: Vec<u8>,
     num_bits: usize,
-) -> Result<SingleRangeProof, JsError> {
+) -> Result<SingleRangeProof, String> {
     let val_base: [u8; 32] = val_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`val_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
     let rand_base: [u8; 32] = rand_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`rand_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
     let r: [u8; 32] = r
         .try_into()
-        .map_err(|e| JsError::new(&format!("`r` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`r` must be exactly 32 bytes: {:?}", e))?;
 
     let pg = PedersenGens {
         B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| JsError::new("invalid val_base point"))?
+            .map_err(|_| "invalid val_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `val_base`"))?,
+            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
         B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| JsError::new("invalid rand_base point"))?
+            .map_err(|_| "invalid rand_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `rand_base`"))?,
+            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
     };
 
     let (proof, comm) = RangeProof::prove_single(
@@ -103,7 +97,8 @@ pub fn range_proof(
         v,
         &Scalar::from_bytes_mod_order(r),
         num_bits,
-    )?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(SingleRangeProof {
         proof: proof.to_bytes(),
@@ -119,39 +114,38 @@ pub fn range_proof(
 /// * `val_base` - Value base point for Pedersen commitment (32-byte compressed point)
 /// * `rand_base` - Randomness base point for Pedersen commitment (32-byte compressed point)
 /// * `num_bits` - Bit length for range proof (8, 16, 32, or 64)
-#[wasm_bindgen]
 pub fn batch_range_proof(
     v: Vec<u64>,
-    rs: Vec<js_sys::Uint8Array>,
+    rs: Vec<Vec<u8>>,
     val_base: Vec<u8>,
     rand_base: Vec<u8>,
     num_bits: usize,
-) -> Result<BatchRangeProof, JsError> {
+) -> Result<BatchRangeProof, String> {
     let val_base: [u8; 32] = val_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`val_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
     let rand_base: [u8; 32] = rand_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`rand_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
 
     let pg = PedersenGens {
         B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| JsError::new("invalid val_base point"))?
+            .map_err(|_| "invalid val_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `val_base`"))?,
+            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
         B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| JsError::new("invalid rand_base point"))?
+            .map_err(|_| "invalid rand_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `rand_base`"))?,
+            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
     };
 
-    let r_scalars: Result<Vec<Scalar>, JsError> = rs
+    let r_scalars: Result<Vec<Scalar>, String> = rs
         .iter()
         .map(|arr| {
             let bytes: [u8; 32] = arr
-                .to_vec()
+                .clone()
                 .try_into()
-                .map_err(|_| JsError::new("each blinding factor must be 32 bytes"))?;
+                .map_err(|_| "each blinding factor must be 32 bytes".to_string())?;
             Ok(Scalar::from_bytes_mod_order(bytes))
         })
         .collect();
@@ -164,11 +158,12 @@ pub fn batch_range_proof(
         &v,
         &r_scalars,
         num_bits,
-    )?;
+    )
+    .map_err(|e| e.to_string())?;
 
-    let serialized_comms: Vec<js_sys::Uint8Array> = comms
+    let serialized_comms: Vec<Vec<u8>> = comms
         .iter()
-        .map(|comm| js_sys::Uint8Array::from(&comm.to_bytes()[..]))
+        .map(|comm| comm.to_bytes().to_vec())
         .collect();
 
     Ok(BatchRangeProof {
@@ -178,40 +173,39 @@ pub fn batch_range_proof(
 }
 
 /// Verify a single range proof.
-#[wasm_bindgen]
 pub fn verify_proof(
     proof: Vec<u8>,
     comm: Vec<u8>,
     val_base: Vec<u8>,
     rand_base: Vec<u8>,
     num_bits: usize,
-) -> Result<bool, JsError> {
+) -> Result<bool, String> {
     let val_base: [u8; 32] = val_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`val_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
     let rand_base: [u8; 32] = rand_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`rand_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
     let comm: [u8; 32] = comm
         .try_into()
-        .map_err(|e| JsError::new(&format!("`comm` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`comm` must be exactly 32 bytes: {:?}", e))?;
 
     let pg = PedersenGens {
         B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| JsError::new("invalid val_base point"))?
+            .map_err(|_| "invalid val_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `val_base`"))?,
+            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
         B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| JsError::new("invalid rand_base point"))?
+            .map_err(|_| "invalid rand_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `rand_base`"))?,
+            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
     };
 
     let proof = RangeProof::from_bytes(&proof)
-        .map_err(|e| JsError::new(&format!("error deserializing range proof: {:?}", e)))?;
+        .map_err(|e| format!("error deserializing range proof: {:?}", e))?;
 
     let comm_point = CompressedRistretto::from_slice(&comm)
-        .map_err(|_| JsError::new("invalid commitment point"))?;
+        .map_err(|_| "invalid commitment point".to_string())?;
 
     let ok = proof
         .verify_single(
@@ -227,48 +221,46 @@ pub fn verify_proof(
 }
 
 /// Verify a batch range proof.
-#[wasm_bindgen]
 pub fn batch_verify_proof(
     proof: Vec<u8>,
-    comms: Vec<js_sys::Uint8Array>,
+    comms: Vec<Vec<u8>>,
     val_base: Vec<u8>,
     rand_base: Vec<u8>,
     num_bits: usize,
-) -> Result<bool, JsError> {
+) -> Result<bool, String> {
     let val_base: [u8; 32] = val_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`val_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
     let rand_base: [u8; 32] = rand_base
         .try_into()
-        .map_err(|e| JsError::new(&format!("`rand_base` must be exactly 32 bytes: {:?}", e)))?;
+        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
 
     if comms.is_empty() {
-        return Err(JsError::new("`comms` cannot be empty"));
+        return Err("`comms` cannot be empty".to_string());
     }
 
     let pg = PedersenGens {
         B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| JsError::new("invalid val_base point"))?
+            .map_err(|_| "invalid val_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `val_base`"))?,
+            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
         B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| JsError::new("invalid rand_base point"))?
+            .map_err(|_| "invalid rand_base point".to_string())?
             .decompress()
-            .ok_or_else(|| JsError::new("failed to decompress `rand_base`"))?,
+            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
     };
 
-    let comm_points: Result<Vec<CompressedRistretto>, JsError> = comms
+    let comm_points: Result<Vec<CompressedRistretto>, String> = comms
         .iter()
-        .map(|arr| {
-            let bytes = arr.to_vec();
-            CompressedRistretto::from_slice(&bytes)
-                .map_err(|_| JsError::new("invalid commitment point"))
+        .map(|bytes| {
+            CompressedRistretto::from_slice(bytes)
+                .map_err(|_| "invalid commitment point".to_string())
         })
         .collect();
     let comm_points = comm_points?;
 
     let proof = RangeProof::from_bytes(&proof)
-        .map_err(|e| JsError::new(&format!("error deserializing range proof: {:?}", e)))?;
+        .map_err(|e| format!("error deserializing range proof: {:?}", e))?;
 
     let ok = proof
         .verify_multiple(
