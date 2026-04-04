@@ -1,0 +1,41 @@
+{
+  "name": "@aptos-labs/confidential-asset-wasm-bindings",
+  "version": "0.1.2",
+  "description": "Unified WASM bindings for Aptos confidential assets (discrete log + range proofs)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aptos-labs/confidential-asset-wasm-bindings.git"
+  },
+  "keywords": [
+    "aptos",
+    "confidential",
+    "wasm",
+    "bulletproofs",
+    "discrete-log",
+    "range-proof"
+  ],
+  "files": ["dist"],
+  "type": "module",
+  "main": "./dist/aptos_confidential_asset_wasm.cjs",
+  "module": "./dist/aptos_confidential_asset_wasm.js",
+  "types": "./dist/aptos_confidential_asset_wasm.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/aptos_confidential_asset_wasm.js",
+      "require": "./dist/aptos_confidential_asset_wasm.cjs",
+      "types": "./dist/aptos_confidential_asset_wasm.d.ts"
+    },
+    "./*.wasm": "./dist/aptos_confidential_asset_wasm_bg.wasm"
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm/web --release",
+    "build:js": "tsdown",
+    "build": "npm run build:wasm && npm run build:js"
+  },
+  "devDependencies": {
+    "tsdown": "^0.21.7",
+    "typescript": "^5.9.3",
+    "wasm-pack": "^0.13.1"
+  }
+}
