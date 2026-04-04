@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-bindings",
-  "version": "0.1.2",
+  "version": "0.8.0",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "license": "Apache-2.0",
   "repository": {
@@ -20,28 +20,37 @@
   "main": "./dist/index.node.cjs",
   "module": "./dist/index.node.mjs",
   "browser": "./dist/index.browser.js",
-  "types": "./dist/index.browser.d.ts",
+  "types": "./dist/index.node.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/index.browser.d.ts",
-      "browser": "./dist/index.browser.js",
-      "import": "./dist/index.node.mjs",
-      "require": "./dist/index.node.cjs",
+      "browser": {
+        "types": "./dist/index.browser.d.ts",
+        "import": "./dist/index.browser.js"
+      },
+      "import": {
+        "types": "./dist/index.node.d.mts",
+        "default": "./dist/index.node.mjs"
+      },
+      "require": {
+        "types": "./dist/index.node.d.cts",
+        "default": "./dist/index.node.cjs"
+      },
       "default": "./dist/index.node.mjs"
-    },
-    "./*.wasm": "./dist/aptos_confidential_asset_wasm_bg.wasm"
+    }
   },
   "scripts": {
-    "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm/web --release",
+    "build:wasm:nodejs": "wasm-pack build ./rust/wasm --target nodejs --out-dir ../../build/wasm/nodejs --release",
+    "build:wasm:web": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm/web --release",
+    "build:wasm": "npm run build:wasm:nodejs && npm run build:wasm:web",
     "build:js": "tsdown",
     "build": "npm run build:wasm && npm run build:js",
     "changeset": "changeset",
-    "release": "npm run build && npm publish"
+    "release": "npm run build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
     "tsdown": "^0.21.7",
-    "typescript": "^5.9.3",
+    "typescript": "^5.8.3",
     "wasm-pack": "^0.13.1"
   }
 }

@@ -1,8 +1,16 @@
-import { defineConfig } from 'tsdown';
+import { defineConfig, type UserConfig } from 'tsdown';
 
-export default defineConfig({
-  entry: 'build/wasm/web/aptos_confidential_asset_wasm.js',
-  copy: ['build/wasm/web/aptos_confidential_asset_wasm*'],
-  format: 'cjs',
-  clean: true,
-});
+const BROWSER_CONFIG: UserConfig = {
+  entry: { "index.browser": "src/index.browser.ts" },
+  format: "esm",
+  platform: "browser",
+};
+
+const NODE_CONFIG: UserConfig = {
+  entry: { "index.node": "src/index.node.ts" },
+  format: ["cjs", "esm"],
+  platform: "node",
+  copy: ['build/wasm/nodejs/aptos_confidential_asset_wasm_bg.wasm'],
+};
+
+export default defineConfig([BROWSER_CONFIG, NODE_CONFIG]);
