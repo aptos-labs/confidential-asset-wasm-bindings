@@ -1,25 +1,38 @@
 #!/bin/bash
 #
-# Prints the size of the built WASM binary.
+# Builds all discrete log feature variants and prints a WASM size comparison table.
 #
-# This script reads the WASM file that was built by scripts/build-wasm.sh
-# and assembled by scripts/gen-npm-pkg.sh into the npm package.
+# Each feature is built with wasm-pack into build/wasm/{feature}/ and the
+# resulting binary sizes are displayed side by side.
 #
 # Usage:
 #   ./scripts/wasm-sizes.sh
-#
-# If WASM files are not found, run:
-#   ./scripts/build-all.sh
 
 set -e
 
-# Get the repo root (parent of scripts/)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WASM_CRATE="$REPO_ROOT/rust/wasm"
 
-# Path to the npm package
-NPM_PKG_DIR="$REPO_ROOT/aptos-confidential-asset-wasm-bindings"
+# Known features and their embedded lookup table sizes
+FEATURES=("tbsgs_k"              "bsgs_k"       "bsgs"         "bl12"          )
+TABLE_SIZES=("~512 KiB"          "~2.0 MiB"     "~2.0 MiB"     "~258 KiB"      )
 
-# Function to format bytes as human-readable
+echo "Building all features..."
+
+for feature in "${FEATURES[@]}"; do
+    out_dir="$REPO_ROOT/build/wasm/$feature"
+    echo "  building $feature"
+    wasm-pack build "$WASM_CRATE" \
+        --target web \
+        --out-dir "$out_dir" \
+        --release \
+        --no-default-features \
+        --features "$feature" \
+        > /dev/null 2>&1
+done
+
+echo ""
+
 humanize_bytes() {
     local bytes=$1
     if (( bytes >= 1048576 )); then
@@ -27,48 +40,40 @@ humanize_bytes() {
     elif (( bytes >= 1024 )); then
         printf "%.2f KiB" "$(echo "scale=2; $bytes / 1024" | bc)"
     else
-        printf "%d bytes" "$bytes"
+        printf "%d B" "$bytes"
     fi
 }
 
-# Check if npm package directory exists
-if [ ! -d "$NPM_PKG_DIR" ]; then
-    echo "Error: npm package directory not found at $NPM_PKG_DIR"
-    echo ""
-    echo "Run ./scripts/build-all.sh first to build the WASM binary."
-    exit 1
-fi
+# Table layout
+COL_FEATURE=12
+COL_TABLE=12
+COL_WASM=26
 
-echo "=============================================="
-echo "WASM Binary Size"
-echo "=============================================="
-echo ""
+sep_seg() { printf '%*s' "$1" '' | tr ' ' '-'; }
+SEP_LINE="+-$(sep_seg $COL_FEATURE)-+-$(sep_seg $COL_TABLE)-+-$(sep_seg $COL_WASM)-+"
 
-# Find and print size of WASM file
-wasm_file=$(find "$NPM_PKG_DIR" -maxdepth 1 -name "*.wasm" -print -quit)
+print_row() {
+    printf "| %-${COL_FEATURE}s | %${COL_TABLE}s | %-${COL_WASM}s |\n" "$1" "$2" "$3"
+}
 
-if [ -z "$wasm_file" ]; then
-    echo "Error: No WASM file found in $NPM_PKG_DIR"
-    echo ""
-    echo "Run ./scripts/build-all.sh first to build the WASM binary."
-    exit 1
-fi
+echo "$SEP_LINE"
+print_row "Feature" "Table Size" "WASM Size"
+echo "$SEP_LINE"
 
-file_name=$(basename "$wasm_file")
-size_bytes=$(stat -f%z "$wasm_file" 2>/dev/null || stat -c%s "$wasm_file")
+for i in "${!FEATURES[@]}"; do
+    feature="${FEATURES[$i]}"
+    table_size="${TABLE_SIZES[$i]}"
 
-printf "%-40s %s (%'d bytes)\n" "$file_name" "$(humanize_bytes "$size_bytes")" "$size_bytes"
+    wasm_file=$(find "$REPO_ROOT/build/wasm/$feature" -maxdepth 1 -name "*.wasm" ! -name "*.d.ts" -print -quit 2>/dev/null)
 
-echo ""
-echo "=============================================="
-echo "Notes"
-echo "=============================================="
-echo ""
-echo "This unified WASM combines both discrete log and range proof functionality"
-echo "into a single module, sharing the curve25519-dalek elliptic curve library."
-echo ""
-echo "Discrete log algorithm selection (compile-time via Cargo.toml features):"
-echo "  - tbsgs_k (default): ~512 KiB table, smallest WASM with good performance"
-echo "  - bsgs_k:            ~2.0 MiB table"
-echo "  - bsgs:              ~2.0 MiB table"
-echo "  - bl12:              ~258 KiB table (smallest, but slower)"
+    if [ -n "$wasm_file" ]; then
+        size_bytes=$(stat -f%z "$wasm_file" 2>/dev/null || stat -c%s "$wasm_file")
+        wasm_size="$(humanize_bytes "$size_bytes") ($size_bytes bytes)"
+    else
+        wasm_size="build failed"
+    fi
+
+    print_row "$feature" "$table_size" "$wasm_size"
+done
+
+echo "$SEP_LINE"
