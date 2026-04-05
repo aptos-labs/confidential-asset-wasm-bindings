@@ -10,60 +10,43 @@ npm install @aptos-labs/confidential-asset-bindings
 
 ## Usage
 
-```typescript
-import init, {
-  DiscreteLogSolver,
-  range_proof,
-  batch_range_proof,
-  verify_proof,
-  batch_verify_proof,
-  initializeWasm,
-} from "@aptos-labs/confidential-asset-bindings";
-
-// Initialize WASM module before calling any functions
-await init();
-```
-
-Node.js consumers do not need to call `initializeWasm()`; the runtime is loaded automatically.
+No initialization required — WASM is loaded automatically on first use, from local `node_modules` in Node.js or from the versioned unpkg CDN in browsers.
 
 ### Discrete Log
 
 Solves discrete logarithms on the Ristretto255 curve for 16-bit and 32-bit secrets. Used to decrypt confidential asset balances.
 
 ```typescript
-const solver = new DiscreteLogSolver();
+import { solveDiscreteLog } from "@aptos-labs/confidential-asset-bindings";
 
 // y is a compressed Ristretto point (32 bytes): y = g^x
-// max_num_bits must be 16 or 32
-const x: bigint = solver.solve(y, 32);
-
-console.log(solver.algorithm()); // e.g. "NaiveTruncatedDoubledLookup (16-bit) + TBSGS-k32 (32-bit)"
-console.log(solver.max_num_bits()); // [16, 32]
+// maxNumBits must be 16 or 32
+const x: bigint = await solveDiscreteLog(y, 32);
 ```
 
 ### Range Proofs
 
-Zero-knowledge range proofs using Bulletproofs. Proves a value lies in `[0, 2^num_bits)` without revealing it.
+Zero-knowledge range proofs using Bulletproofs. Proves a value lies in `[0, 2^numBits)` without revealing it.
 
 ```typescript
-// Generate a single range proof
+import {
+  rangeProof,
+  batchRangeProof,
+  verifyProof,
+  batchVerifyProof,
+} from "@aptos-labs/confidential-asset-bindings";
+
 // r is a 32-byte blinding scalar
-// val_base and rand_base are 32-byte compressed Ristretto points (Pedersen bases)
-// num_bits must be 8, 16, 32, or 64
-const result = range_proof(value, r, val_base, rand_base, num_bits);
-const proofBytes: Uint8Array = result.proof();
-const commitment: Uint8Array = result.comm(); // 32 bytes
+// valBase and randBase are 32-byte compressed Ristretto points (Pedersen bases)
+// numBits must be 8, 16, 32, or 64 (default: 32)
+const { proof, commitment } = await rangeProof({ v, r, valBase, randBase, numBits });
 
-// Verify a single range proof
-const valid: boolean = verify_proof(proofBytes, commitment, val_base, rand_base, num_bits);
+const valid = await verifyProof({ proof, comm: commitment, valBase, randBase, numBits });
 
-// Generate a batch range proof
-const batchResult = batch_range_proof(values, blindings, val_base, rand_base, num_bits);
-const batchProof: Uint8Array = batchResult.proof();
-const commitments: Uint8Array[] = batchResult.comms(); // one per value
+// Batch variants
+const { proof: batchProof, commitments } = await batchRangeProof({ v: values, rs: blindings, valBase, randBase, numBits });
 
-// Verify a batch range proof
-const batchValid: boolean = batch_verify_proof(batchProof, commitments, val_base, rand_base, num_bits);
+const batchValid = await batchVerifyProof({ proof: batchProof, comms: commitments, valBase, randBase, numBits });
 ```
 
 ## Cross-Version Compatibility
