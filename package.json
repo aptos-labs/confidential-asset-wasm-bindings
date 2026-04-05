@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-bindings",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "license": "Apache-2.0",
   "repository": {
@@ -17,25 +17,20 @@
   ],
   "files": ["dist"],
   "type": "module",
-  "main": "./dist/index.node.cjs",
-  "module": "./dist/index.node.mjs",
-  "browser": "./dist/index.browser.js",
-  "types": "./dist/index.node.d.mts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "browser": {
-        "types": "./dist/index.browser.d.ts",
-        "import": "./dist/index.browser.js"
-      },
       "import": {
-        "types": "./dist/index.node.d.mts",
-        "default": "./dist/index.node.mjs"
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
       },
       "require": {
-        "types": "./dist/index.node.d.cts",
-        "default": "./dist/index.node.cjs"
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
       },
-      "default": "./dist/index.node.mjs"
+      "default": "./dist/index.mjs"
     }
   },
   "scripts": {

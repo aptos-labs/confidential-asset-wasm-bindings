@@ -11,5 +11,7 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/index.browser.ts", "src/index.node.ts"]
+  "include": [
+    "src/index.ts"
+  ]
 }

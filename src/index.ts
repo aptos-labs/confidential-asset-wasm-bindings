@@ -10,6 +10,40 @@ import pkg from '../package.json';
 
 const CDN_WASM_URL = `https://unpkg.com/@aptos-labs/confidential-asset-bindings@${pkg.version}/dist/aptos_confidential_asset_wasm_bg.wasm`;
 
+async function getNodeModulesWASM(): Promise<string | BufferSource> {
+  // In Node.js, try to load from local node_modules
+  try {
+    // Dynamic import for Node.js fs module
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // Try to find the WASM file in node_modules
+    const possiblePaths = [
+      path.resolve(
+          process.cwd(),
+          "node_modules/@aptos-labs/confidential-asset-bindings/dist/aptos_confidential_asset_wasm_bg.wasm",
+      ),
+      new URL("./aptos_confidential_asset_wasm_bg.wasm", import.meta.url).pathname,
+    ];
+
+    for (const wasmPath of possiblePaths) {
+      if (fs.existsSync(wasmPath)) {
+        return fs.readFileSync(wasmPath);
+      }
+    }
+  } catch {
+    // Fall through to URL
+  }
+  return CDN_WASM_URL;
+}
+
+async function getWasmSource(): Promise<string | BufferSource> {
+  if (typeof process !== "undefined" && process.versions?.node) {
+    return getNodeModulesWASM();
+  }
+  return CDN_WASM_URL;
+}
+
 let initPromise: Promise<void> | undefined;
 let initialized = false;
 
@@ -18,7 +52,8 @@ export async function ensureWasmInitialized(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       try {
-        await init({ module_or_path: CDN_WASM_URL });
+        const moduleOrPath = await getWasmSource();
+        await init({ module_or_path: moduleOrPath });
         initialized = true;
       } catch (error) {
         initPromise = undefined;
