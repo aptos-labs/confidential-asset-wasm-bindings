@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-bindings",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "license": "Apache-2.0",
   "repository": {
@@ -15,7 +15,9 @@
     "discrete-log",
     "range-proof"
   ],
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
