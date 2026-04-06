@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@aptos-labs/confidential-asset-bindings": ["../../src/index.native"],
+      "@aptos-labs/confidential-asset-bindings/*": ["../../src/*"]
+    }
+  }
+}
