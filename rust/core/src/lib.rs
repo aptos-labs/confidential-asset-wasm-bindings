@@ -19,6 +19,3 @@
 pub mod discrete_log;
 pub mod range_proof;
 
-pub fn hello() -> String {
-    "Hello from Rust! 🦀".to_string()
-}

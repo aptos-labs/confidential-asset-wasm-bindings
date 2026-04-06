@@ -1,4 +1,3 @@
-import { hello } from '@aptos-labs/confidential-asset-bindings';
 import { SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 export default function App() {
@@ -7,7 +6,6 @@ export default function App() {
       <ScrollView style={styles.container}>
         <Text style={styles.header}>Module API Example</Text>
         <Group name="Functions">
-          <Text>{hello()}</Text>
         </Group>
       </ScrollView>
     </SafeAreaView>

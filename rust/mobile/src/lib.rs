@@ -1,5 +1,7 @@
 #[cfg(target_os = "ios")]
-pub mod ffi;
-
+mod abi;
+#[cfg(target_os = "ios")]
+mod ffi;
 #[cfg(target_os = "android")]
-pub mod jni;
+mod jni;
+mod shared;
