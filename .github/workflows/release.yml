@@ -13,8 +13,10 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: write
       pull-requests: write
+
     steps:
       - name: Authenticate as Aptos Labs Bot
         uses: actions/create-github-app-token@v3
@@ -49,4 +51,3 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ steps.aptos-labs-bot-auth.outputs.token }}
-          NPM_TOKEN: ${{ secrets.APTOS_LABS_NPM_TOKEN }}
