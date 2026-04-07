@@ -1,5 +1,19 @@
 import ConfidentialAssetBindingsModule from "./ConfidentialAssetBindingsModule";
 
+export type {
+  BatchRangeProofInputs,
+  BatchRangeProofResult,
+  BatchVerifyRangeProofInputs,
+  SolveDiscreteLogInputs,
+} from './types';
+
+import type {
+  BatchRangeProofInputs,
+  BatchRangeProofResult,
+  BatchVerifyRangeProofInputs,
+  SolveDiscreteLogInputs,
+} from './types';
+
 const RANGE_PROOF_NUM_BITS = new Set([8, 16, 32, 64]);
 const DISCRETE_LOG_MAX_NUM_BITS = new Set([16, 32]);
 const BATCH_ELEMENT_BYTES = 32;
@@ -64,75 +78,7 @@ function packU64Values(values: bigint[]): Uint8Array {
   return valuesFlat;
 }
 
-function resolveCommitment(inputs: VerifyRangeProofInputs): Uint8Array {
-  const commitment = inputs.commitment ?? inputs.comm;
-  if (!commitment) {
-    throw new Error("verifyProof requires either commitment or comm.");
-  }
-  return commitment;
-}
-
-function resolveCommitments(inputs: BatchVerifyRangeProofInputs): Uint8Array[] {
-  const commitments = inputs.commitments ?? inputs.comms;
-  if (!commitments) {
-    throw new Error("batchVerifyProof requires either commitments or comms.");
-  }
-  return commitments;
-}
-
-export interface RangeProofInputs {
-  v: bigint;
-  r: Uint8Array;
-  valBase: Uint8Array;
-  randBase: Uint8Array;
-  numBits?: number;
-}
-
-export interface BatchRangeProofInputs {
-  v: bigint[];
-  rs: Uint8Array[];
-  valBase: Uint8Array;
-  randBase: Uint8Array;
-  numBits?: number;
-}
-
-export interface VerifyRangeProofInputs {
-  proof: Uint8Array;
-  commitment?: Uint8Array;
-  comm?: Uint8Array;
-  valBase: Uint8Array;
-  randBase: Uint8Array;
-  numBits?: number;
-}
-
-export interface BatchVerifyRangeProofInputs {
-  proof: Uint8Array;
-  commitments?: Uint8Array[];
-  comms?: Uint8Array[];
-  valBase: Uint8Array;
-  randBase: Uint8Array;
-  numBits?: number;
-}
-
-export const rangeProof = async (inputs: RangeProofInputs) => {
-  const { v, r, valBase, randBase, numBits = 32 } = inputs;
-  assertUint64(v, "v");
-  assertRangeProofNumBits(numBits);
-  const result = await ConfidentialAssetBindingsModule.rangeProof(
-    v.toString(),
-    r,
-    valBase,
-    randBase,
-    numBits
-  );
-  return {
-    proof: result.proof,
-    commitment: result.comm,
-    comm: result.comm,
-  };
-};
-
-export const batchRangeProof = async (inputs: BatchRangeProofInputs) => {
+export const batchRangeProof = async (inputs: BatchRangeProofInputs): Promise<BatchRangeProofResult> => {
   const { v, rs, valBase, randBase, numBits = 32 } = inputs;
   assertRangeProofNumBits(numBits);
 
@@ -168,9 +114,9 @@ export const batchRangeProof = async (inputs: BatchRangeProofInputs) => {
     );
   }
 
-  const commitments: Uint8Array[] = [];
+  const comms: Uint8Array[] = [];
   for (let i = 0; i < result.count; i++) {
-    commitments.push(
+    comms.push(
       result.commsFlat.slice(
         i * BATCH_ELEMENT_BYTES,
         (i + 1) * BATCH_ELEMENT_BYTES
@@ -178,30 +124,33 @@ export const batchRangeProof = async (inputs: BatchRangeProofInputs) => {
     );
   }
 
-  return {
-    proof: result.proof,
-    commitments,
-    comms: commitments,
-  };
+  return { proof: result.proof, comms };
 };
 
-export const verifyProof = async (inputs: VerifyRangeProofInputs) => {
-  const { proof, valBase, randBase, numBits = 32 } = inputs;
+export const batchVerifyProof = async (inputs: BatchVerifyRangeProofInputs): Promise<boolean> => {
+  const { proof, comms, valBase, randBase, numBits = 32 } = inputs;
   assertRangeProofNumBits(numBits);
-  const commitment = resolveCommitment(inputs);
-  return ConfidentialAssetBindingsModule.verifyProof(
+  assertFixedWidthBatch(comms, BATCH_ELEMENT_BYTES, "comms");
+
+  const commsFlat = new Uint8Array(
+    comms.reduce((acc, c) => acc + c.length, 0)
+  );
+  let offset = 0;
+  for (const c of comms) {
+    commsFlat.set(c, offset);
+    offset += c.length;
+  }
+
+  return ConfidentialAssetBindingsModule.batchVerifyProof(
     proof,
-    commitment,
+    commsFlat,
+    comms.length,
     valBase,
     randBase,
     numBits
   );
 };
 
-export interface SolveDiscreteLogInputs {
-  y: Uint8Array;
-  maxNumBits: number;
-}
 
 let _solverHandle: Promise<number> | null = null;
 
@@ -253,28 +202,3 @@ export async function solveDiscreteLog(
   );
   return BigInt(result);
 }
-
-export const batchVerifyProof = async (inputs: BatchVerifyRangeProofInputs) => {
-  const { proof, valBase, randBase, numBits = 32 } = inputs;
-  assertRangeProofNumBits(numBits);
-  const commitments = resolveCommitments(inputs);
-  assertFixedWidthBatch(commitments, BATCH_ELEMENT_BYTES, "commitments");
-
-  const commsFlat = new Uint8Array(
-    commitments.reduce((acc, c) => acc + c.length, 0)
-  );
-  let offset = 0;
-  for (const c of commitments) {
-    commsFlat.set(c, offset);
-    offset += c.length;
-  }
-
-  return ConfidentialAssetBindingsModule.batchVerifyProof(
-    proof,
-    commsFlat,
-    commitments.length,
-    valBase,
-    randBase,
-    numBits
-  );
-};

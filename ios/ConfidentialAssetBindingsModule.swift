@@ -158,44 +158,6 @@ public class ConfidentialAssetBindingsModule: Module {
     }
   }
 
-  private func makeSingleRangeProof(value: String, r: Data, valBase: Data, randBase: Data, numBits: Int) throws -> [String: Data] {
-    try validateRangeProofNumBits(numBits)
-    guard let numericValue = UInt64(value) else {
-      throw Exception(name: "ERR_INVALID_U64", description: "Expected unsigned 64-bit decimal string, got \(value)")
-    }
-
-    let result = r.withUnsafeBytes { rBytes in
-      valBase.withUnsafeBytes { valBytes in
-        randBase.withUnsafeBytes { randBytes in
-          confidential_asset_range_proof(
-            numericValue,
-            rBytes.bindMemory(to: UInt8.self).baseAddress,
-            r.count,
-            valBytes.bindMemory(to: UInt8.self).baseAddress,
-            valBase.count,
-            randBytes.bindMemory(to: UInt8.self).baseAddress,
-            randBase.count,
-            numBits
-          )
-        }
-      }
-    }
-    defer {
-      freeBuffer(result.error)
-      freeBuffer(result.proof)
-      freeBuffer(result.comm)
-    }
-
-    if let message = errorString(from: result.error) {
-      throw Exception(name: "ERR_RANGE_PROOF", description: message)
-    }
-
-    return [
-      "proof": data(from: result.proof),
-      "comm": data(from: result.comm),
-    ]
-  }
-
   private func makeBatchRangeProof(
     values: [UInt64],
     blindingsFlat: Data,
@@ -263,10 +225,6 @@ public class ConfidentialAssetBindingsModule: Module {
       }
     }
 
-    AsyncFunction("rangeProof") { (value: String, r: Data, valBase: Data, randBase: Data, numBits: Int) throws -> [String: Data] in
-      try self.makeSingleRangeProof(value: value, r: r, valBase: valBase, randBase: randBase, numBits: numBits)
-    }
-
     AsyncFunction("batchRangeProof") { (valuesFlat: Data, blindingsFlat: Data, valueCount: Int, valBase: Data, randBase: Data, numBits: Int) throws -> [String: Any] in
       let numericValues = try self.decodeUInt64Values(from: valuesFlat, count: valueCount)
       return try self.makeBatchRangeProof(
@@ -277,38 +235,6 @@ public class ConfidentialAssetBindingsModule: Module {
         randBase: randBase,
         numBits: numBits
       )
-    }
-
-    AsyncFunction("verifyProof") { (proof: Data, comm: Data, valBase: Data, randBase: Data, numBits: Int) throws -> Bool in
-      try self.validateRangeProofNumBits(numBits)
-      let result = proof.withUnsafeBytes { proofBytes in
-        comm.withUnsafeBytes { commBytes in
-          valBase.withUnsafeBytes { valBytes in
-            randBase.withUnsafeBytes { randBytes in
-              confidential_asset_verify_proof(
-                proofBytes.bindMemory(to: UInt8.self).baseAddress,
-                proof.count,
-                commBytes.bindMemory(to: UInt8.self).baseAddress,
-                comm.count,
-                valBytes.bindMemory(to: UInt8.self).baseAddress,
-                valBase.count,
-                randBytes.bindMemory(to: UInt8.self).baseAddress,
-                randBase.count,
-                numBits
-              )
-            }
-          }
-        }
-      }
-      defer {
-        self.freeBuffer(result.error)
-      }
-
-      if let message = errorString(from: result.error) {
-        throw Exception(name: "ERR_VERIFY_PROOF", description: message)
-      }
-
-      return result.value
     }
 
     AsyncFunction("batchVerifyProof") { (proof: Data, commsFlat: Data, commCount: Int, valBase: Data, randBase: Data, numBits: Int) throws -> Bool in

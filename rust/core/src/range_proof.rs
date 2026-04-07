@@ -18,24 +18,6 @@ pub static BULLETPROOF_DST: &[u8] = b"AptosConfidentialAsset/BulletproofRangePro
 pub static BULLETPROOF_GENERATORS: Lazy<BulletproofGens> =
     Lazy::new(|| BulletproofGens::new(MAX_RANGE_BITS, 16));
 
-/// Result of a single range proof generation
-pub struct SingleRangeProof {
-    pub proof: Vec<u8>,
-    pub comm: Vec<u8>,
-}
-
-impl SingleRangeProof {
-    /// Returns the serialized proof bytes
-    pub fn proof(&self) -> Vec<u8> {
-        self.proof.clone()
-    }
-
-    /// Returns the serialized commitment (32 bytes)
-    pub fn comm(&self) -> Vec<u8> {
-        self.comm.clone()
-    }
-}
-
 /// Result of a batch range proof generation
 pub struct BatchRangeProof {
     pub proof: Vec<u8>,
@@ -52,58 +34,6 @@ impl BatchRangeProof {
     pub fn comms(&self) -> Vec<Vec<u8>> {
         self.comms.clone()
     }
-}
-
-/// Generate a single range proof.
-///
-/// # Arguments
-/// * `v` - The secret value to prove is in range [0, 2^num_bits)
-/// * `r` - The blinding factor (32-byte scalar)
-/// * `val_base` - Value base point for Pedersen commitment (32-byte compressed point)
-/// * `rand_base` - Randomness base point for Pedersen commitment (32-byte compressed point)
-/// * `num_bits` - Bit length for range proof (8, 16, 32, or 64)
-pub fn range_proof(
-    v: u64,
-    r: Vec<u8>,
-    val_base: Vec<u8>,
-    rand_base: Vec<u8>,
-    num_bits: usize,
-) -> Result<SingleRangeProof, String> {
-    let val_base: [u8; 32] = val_base
-        .try_into()
-        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
-    let rand_base: [u8; 32] = rand_base
-        .try_into()
-        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
-    let r: [u8; 32] = r
-        .try_into()
-        .map_err(|e| format!("`r` must be exactly 32 bytes: {:?}", e))?;
-
-    let pg = PedersenGens {
-        B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| "invalid val_base point".to_string())?
-            .decompress()
-            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
-        B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| "invalid rand_base point".to_string())?
-            .decompress()
-            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
-    };
-
-    let (proof, comm) = RangeProof::prove_single(
-        &BULLETPROOF_GENERATORS,
-        &pg,
-        &mut Transcript::new(BULLETPROOF_DST),
-        v,
-        &Scalar::from_bytes_mod_order(r),
-        num_bits,
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok(SingleRangeProof {
-        proof: proof.to_bytes(),
-        comm: comm.to_bytes().to_vec(),
-    })
 }
 
 /// Generate a batch range proof for multiple values.
@@ -170,54 +100,6 @@ pub fn batch_range_proof(
         proof: proof.to_bytes(),
         comms: serialized_comms,
     })
-}
-
-/// Verify a single range proof.
-pub fn verify_proof(
-    proof: Vec<u8>,
-    comm: Vec<u8>,
-    val_base: Vec<u8>,
-    rand_base: Vec<u8>,
-    num_bits: usize,
-) -> Result<bool, String> {
-    let val_base: [u8; 32] = val_base
-        .try_into()
-        .map_err(|e| format!("`val_base` must be exactly 32 bytes: {:?}", e))?;
-    let rand_base: [u8; 32] = rand_base
-        .try_into()
-        .map_err(|e| format!("`rand_base` must be exactly 32 bytes: {:?}", e))?;
-    let comm: [u8; 32] = comm
-        .try_into()
-        .map_err(|e| format!("`comm` must be exactly 32 bytes: {:?}", e))?;
-
-    let pg = PedersenGens {
-        B: CompressedRistretto::from_slice(&val_base)
-            .map_err(|_| "invalid val_base point".to_string())?
-            .decompress()
-            .ok_or_else(|| "failed to decompress `val_base`".to_string())?,
-        B_blinding: CompressedRistretto::from_slice(&rand_base)
-            .map_err(|_| "invalid rand_base point".to_string())?
-            .decompress()
-            .ok_or_else(|| "failed to decompress `rand_base`".to_string())?,
-    };
-
-    let proof = RangeProof::from_bytes(&proof)
-        .map_err(|e| format!("error deserializing range proof: {:?}", e))?;
-
-    let comm_point = CompressedRistretto::from_slice(&comm)
-        .map_err(|_| "invalid commitment point".to_string())?;
-
-    let ok = proof
-        .verify_single(
-            &BULLETPROOF_GENERATORS,
-            &pg,
-            &mut Transcript::new(BULLETPROOF_DST),
-            &comm_point,
-            num_bits,
-        )
-        .is_ok();
-
-    Ok(ok)
 }
 
 /// Verify a batch range proof.

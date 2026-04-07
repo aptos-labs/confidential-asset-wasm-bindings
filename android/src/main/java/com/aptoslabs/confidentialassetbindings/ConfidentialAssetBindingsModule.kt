@@ -40,13 +40,6 @@ class ConfidentialAssetBindingsModule : Module() {
     return commsFlat.size / batchElementBytes
   }
 
-  private external fun rangeProof(
-    value: String,
-    r: ByteArray,
-    valBase: ByteArray,
-    randBase: ByteArray,
-    numBits: Int,
-  ): Array<ByteArray>
   private external fun batchRangeProof(
     valuesFlat: ByteArray,
     blindingsFlat: ByteArray,
@@ -55,13 +48,6 @@ class ConfidentialAssetBindingsModule : Module() {
     randBase: ByteArray,
     numBits: Int,
   ): Array<ByteArray>
-  private external fun verifyProof(
-    proof: ByteArray,
-    comm: ByteArray,
-    valBase: ByteArray,
-    randBase: ByteArray,
-    numBits: Int,
-  ): Boolean
   private external fun batchVerifyProof(
     proof: ByteArray,
     commsFlat: ByteArray,
@@ -84,18 +70,6 @@ class ConfidentialAssetBindingsModule : Module() {
       solverPointers.clear()
     }
 
-    AsyncFunction("rangeProof") { value: String, r: ByteArray, valBase: ByteArray, randBase: ByteArray, numBits: Int ->
-      ensureRustLoaded()
-      val (proof, comm) = requireByteArrayPair(
-        "rangeProof",
-        rangeProof(value, r, valBase, randBase, numBits)
-      )
-      mapOf(
-        "proof" to proof,
-        "comm" to comm,
-      )
-    }
-
     AsyncFunction("batchRangeProof") { valuesFlat: ByteArray, blindingsFlat: ByteArray, valueCount: Int, valBase: ByteArray, randBase: ByteArray, numBits: Int ->
       ensureRustLoaded()
       val (proof, commsFlat) = requireByteArrayPair(
@@ -108,11 +82,6 @@ class ConfidentialAssetBindingsModule : Module() {
         "commsFlat" to commsFlat,
         "count" to count,
       )
-    }
-
-    AsyncFunction("verifyProof") { proof: ByteArray, comm: ByteArray, valBase: ByteArray, randBase: ByteArray, numBits: Int ->
-      ensureRustLoaded()
-      verifyProof(proof, comm, valBase, randBase, numBits)
     }
 
     AsyncFunction("batchVerifyProof") { proof: ByteArray, commsFlat: ByteArray, commCount: Int, valBase: ByteArray, randBase: ByteArray, numBits: Int ->

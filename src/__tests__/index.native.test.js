@@ -1,7 +1,5 @@
 const mockNativeModule = {
-  rangeProof: jest.fn(),
   batchRangeProof: jest.fn(),
-  verifyProof: jest.fn(),
   batchVerifyProof: jest.fn(),
   createSolver: jest.fn(),
   freeSolver: jest.fn(),
@@ -42,67 +40,25 @@ const {
   batchRangeProof,
   batchVerifyProof,
   disposeSolver,
-  rangeProof,
   solveDiscreteLog,
-  verifyProof,
 } = loadIndexNativeModule();
 
 const makeBytes = (length, value = 1) => new Uint8Array(length).fill(value);
 
 describe("index.native range proof validation", () => {
-  const singleInputs = {
-    v: 1n,
-    r: makeBytes(32, 1),
-    valBase: makeBytes(32, 2),
-    randBase: makeBytes(32, 3),
-  };
-  const verifyInputs = {
-    proof: makeBytes(64, 4),
-    comm: makeBytes(32, 5),
-    valBase: makeBytes(32, 6),
-    randBase: makeBytes(32, 7),
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    mockNativeModule.rangeProof.mockResolvedValue({
-      proof: makeBytes(64, 8),
-      comm: makeBytes(32, 9),
-    });
     mockNativeModule.batchRangeProof.mockResolvedValue({
       proof: makeBytes(96, 10),
       commsFlat: new Uint8Array([...makeBytes(32, 11), ...makeBytes(32, 12)]),
       count: 2,
     });
-    mockNativeModule.verifyProof.mockResolvedValue(true);
     mockNativeModule.batchVerifyProof.mockResolvedValue(true);
   });
-
-  it.each([8, 16, 32, 64])(
-    "accepts supported numBits %i for rangeProof",
-    async (numBits) => {
-      await expect(rangeProof({ ...singleInputs, numBits })).resolves.toEqual({
-        proof: makeBytes(64, 8),
-        commitment: makeBytes(32, 9),
-        comm: makeBytes(32, 9),
-      });
-
-      expect(mockNativeModule.rangeProof).toHaveBeenCalledWith(
-        "1",
-        singleInputs.r,
-        singleInputs.valBase,
-        singleInputs.randBase,
-        numBits
-      );
-    }
-  );
 
   it.each([-1, 0, 7, 24, 65, 1.5, Number.NaN])(
     "rejects unsupported numBits %p for all range proof entrypoints",
     async (numBits) => {
-      await expect(rangeProof({ ...singleInputs, numBits })).rejects.toThrow(
-        "numBits must be one of 8, 16, 32, or 64"
-      );
       await expect(
         batchRangeProof({
           v: [1n],
@@ -112,9 +68,6 @@ describe("index.native range proof validation", () => {
           numBits,
         })
       ).rejects.toThrow("numBits must be one of 8, 16, 32, or 64");
-      await expect(verifyProof({ ...verifyInputs, numBits })).rejects.toThrow(
-        "numBits must be one of 8, 16, 32, or 64"
-      );
       await expect(
         batchVerifyProof({
           proof: makeBytes(64, 16),
@@ -125,9 +78,7 @@ describe("index.native range proof validation", () => {
         })
       ).rejects.toThrow("numBits must be one of 8, 16, 32, or 64");
 
-      expect(mockNativeModule.rangeProof).not.toHaveBeenCalled();
       expect(mockNativeModule.batchRangeProof).not.toHaveBeenCalled();
-      expect(mockNativeModule.verifyProof).not.toHaveBeenCalled();
       expect(mockNativeModule.batchVerifyProof).not.toHaveBeenCalled();
     }
   );
@@ -152,6 +103,22 @@ describe("index.native range proof validation", () => {
       makeBytes(32, 23),
       32
     );
+  });
+
+  it("returns { proof, comms } from batchRangeProof", async () => {
+    const result = await batchRangeProof({
+      v: [1n, 2n],
+      rs: [makeBytes(32, 1), makeBytes(32, 2)],
+      valBase: makeBytes(32, 3),
+      randBase: makeBytes(32, 4),
+      numBits: 32,
+    });
+
+    expect(result).toEqual({
+      proof: makeBytes(96, 10),
+      comms: [makeBytes(32, 11), makeBytes(32, 12)],
+    });
+    expect(result).not.toHaveProperty("commitments");
   });
 
   it("rejects batchRangeProof when blinding count does not match value count", async () => {
@@ -182,7 +149,7 @@ describe("index.native range proof validation", () => {
     expect(mockNativeModule.batchRangeProof).not.toHaveBeenCalled();
   });
 
-  it("rejects batchVerifyProof when a commitment is not 32 bytes", async () => {
+  it("rejects batchVerifyProof when a comm is not 32 bytes", async () => {
     await expect(
       batchVerifyProof({
         proof: makeBytes(64, 27),
@@ -191,7 +158,7 @@ describe("index.native range proof validation", () => {
         randBase: makeBytes(32, 30),
         numBits: 32,
       })
-    ).rejects.toThrow("commitments[0] must be exactly 32 bytes");
+    ).rejects.toThrow("comms[0] must be exactly 32 bytes");
 
     expect(mockNativeModule.batchVerifyProof).not.toHaveBeenCalled();
   });
@@ -213,42 +180,6 @@ describe("index.native range proof validation", () => {
       })
     ).rejects.toThrow(
       "Native batchRangeProof returned 33 commitment bytes for 2 commitments."
-    );
-  });
-
-  it("accepts commitment aliases for verification helpers", async () => {
-    await expect(
-      verifyProof({
-        proof: makeBytes(64, 37),
-        commitment: makeBytes(32, 38),
-        valBase: makeBytes(32, 39),
-        randBase: makeBytes(32, 40),
-      })
-    ).resolves.toBe(true);
-
-    await expect(
-      batchVerifyProof({
-        proof: makeBytes(64, 41),
-        commitments: [makeBytes(32, 42)],
-        valBase: makeBytes(32, 43),
-        randBase: makeBytes(32, 44),
-      })
-    ).resolves.toBe(true);
-
-    expect(mockNativeModule.verifyProof).toHaveBeenCalledWith(
-      makeBytes(64, 37),
-      makeBytes(32, 38),
-      makeBytes(32, 39),
-      makeBytes(32, 40),
-      32
-    );
-    expect(mockNativeModule.batchVerifyProof).toHaveBeenCalledWith(
-      makeBytes(64, 41),
-      makeBytes(32, 42),
-      1,
-      makeBytes(32, 43),
-      makeBytes(32, 44),
-      32
     );
   });
 

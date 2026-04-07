@@ -2,7 +2,6 @@ use crate::{
     abi::{
         buffer_from_vec, empty_buffer, take_buffer, ConfidentialAssetBatchRangeProofResult,
         ConfidentialAssetBoolResult, ConfidentialAssetByteBuffer, ConfidentialAssetBytesResult,
-        ConfidentialAssetRangeProofResult,
     },
     shared::{
         bytes_from_ptr, sanitize_external_error, solver_from_ptr, split_exact_chunks,
@@ -14,7 +13,6 @@ use aptos_confidential_asset_core::{
     discrete_log::DiscreteLogSolver,
     range_proof::{
         batch_range_proof as core_batch_range_proof, batch_verify_proof as core_batch_verify_proof,
-        range_proof as core_range_proof, verify_proof as core_verify_proof,
     },
 };
 use std::ffi::{c_char, c_void, CString};
@@ -29,14 +27,6 @@ fn ok_bytes(value: Vec<u8>) -> ConfidentialAssetBytesResult {
 fn err_bytes(message: String) -> ConfidentialAssetBytesResult {
     ConfidentialAssetBytesResult {
         value: empty_buffer(),
-        error: buffer_from_vec(message.into_bytes()),
-    }
-}
-
-fn err_single(message: String) -> ConfidentialAssetRangeProofResult {
-    ConfidentialAssetRangeProofResult {
-        proof: empty_buffer(),
-        comm: empty_buffer(),
         error: buffer_from_vec(message.into_bytes()),
     }
 }
@@ -74,51 +64,6 @@ pub extern "C" fn confidential_asset_free_cstring(ptr: *mut c_char) {
 #[no_mangle]
 pub extern "C" fn confidential_asset_free_buffer(buffer: ConfidentialAssetByteBuffer) {
     let _ = take_buffer(buffer);
-}
-
-/// Generates a single Bulletproof range proof.
-#[no_mangle]
-pub extern "C" fn confidential_asset_range_proof(
-    value: u64,
-    r_ptr: *const u8,
-    r_len: usize,
-    val_base_ptr: *const u8,
-    val_base_len: usize,
-    rand_base_ptr: *const u8,
-    rand_base_len: usize,
-    num_bits: usize,
-) -> ConfidentialAssetRangeProofResult {
-    if let Err(error) = validate_range_num_bits(num_bits) {
-        return err_single(error);
-    }
-
-    let r = match bytes_from_ptr(r_ptr, r_len) {
-        Ok(value) => value,
-        Err(error) => return err_single(error),
-    };
-    let val_base = match bytes_from_ptr(val_base_ptr, val_base_len) {
-        Ok(value) => value,
-        Err(error) => return err_single(error),
-    };
-    let rand_base = match bytes_from_ptr(rand_base_ptr, rand_base_len) {
-        Ok(value) => value,
-        Err(error) => return err_single(error),
-    };
-
-    match core_range_proof(
-        value,
-        r.to_vec(),
-        val_base.to_vec(),
-        rand_base.to_vec(),
-        num_bits,
-    ) {
-        Ok(result) => ConfidentialAssetRangeProofResult {
-            proof: buffer_from_vec(result.proof),
-            comm: buffer_from_vec(result.comm),
-            error: empty_buffer(),
-        },
-        Err(error) => err_single(sanitize_external_error(error)),
-    }
 }
 
 /// Generates a batch Bulletproof range proof.
@@ -197,52 +142,6 @@ pub extern "C" fn confidential_asset_batch_range_proof(
             }
         }
         Err(error) => err_batch(sanitize_external_error(error)),
-    }
-}
-
-/// Verifies a single range proof.
-#[no_mangle]
-pub extern "C" fn confidential_asset_verify_proof(
-    proof_ptr: *const u8,
-    proof_len: usize,
-    comm_ptr: *const u8,
-    comm_len: usize,
-    val_base_ptr: *const u8,
-    val_base_len: usize,
-    rand_base_ptr: *const u8,
-    rand_base_len: usize,
-    num_bits: usize,
-) -> ConfidentialAssetBoolResult {
-    if let Err(error) = validate_range_num_bits(num_bits) {
-        return err_bool(error);
-    }
-
-    let proof = match bytes_from_ptr(proof_ptr, proof_len) {
-        Ok(value) => value,
-        Err(error) => return err_bool(error),
-    };
-    let comm = match bytes_from_ptr(comm_ptr, comm_len) {
-        Ok(value) => value,
-        Err(error) => return err_bool(error),
-    };
-    let val_base = match bytes_from_ptr(val_base_ptr, val_base_len) {
-        Ok(value) => value,
-        Err(error) => return err_bool(error),
-    };
-    let rand_base = match bytes_from_ptr(rand_base_ptr, rand_base_len) {
-        Ok(value) => value,
-        Err(error) => return err_bool(error),
-    };
-
-    match core_verify_proof(
-        proof.to_vec(),
-        comm.to_vec(),
-        val_base.to_vec(),
-        rand_base.to_vec(),
-        num_bits,
-    ) {
-        Ok(result) => ok_bool(result),
-        Err(error) => err_bool(sanitize_external_error(error)),
     }
 }
 

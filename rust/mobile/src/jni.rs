@@ -6,7 +6,6 @@ use aptos_confidential_asset_core::{
     discrete_log::DiscreteLogSolver,
     range_proof::{
         batch_range_proof as core_batch_range_proof, batch_verify_proof as core_batch_verify_proof,
-        range_proof as core_range_proof, verify_proof as core_verify_proof,
     },
 };
 use jni::{
@@ -76,79 +75,6 @@ fn parse_u64_le_array(
             Ok(u64::from_le_bytes(bytes))
         })
         .collect()
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_ConfidentialAssetBindingsModule_rangeProof(
-    mut env: JNIEnv,
-    _class: JClass,
-    value: JString,
-    r: jbyteArray,
-    val_base: jbyteArray,
-    rand_base: jbyteArray,
-    num_bits: jint,
-) -> jobjectArray {
-    let num_bits = match usize::try_from(num_bits) {
-        Ok(value) => value,
-        Err(_) => {
-            throw_java(&mut env, "num_bits must be non-negative");
-            return std::ptr::null_mut();
-        }
-    };
-    if let Err(error) = validate_range_num_bits(num_bits) {
-        throw_java(&mut env, error);
-        return std::ptr::null_mut();
-    }
-
-    let value = match parse_jstring(&mut env, value) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return std::ptr::null_mut();
-        }
-    };
-    let numeric_value = match value.parse::<u64>() {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, format!("invalid u64 string: {error}"));
-            return std::ptr::null_mut();
-        }
-    };
-    let r = match parse_jbyte_array(&mut env, r) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return std::ptr::null_mut();
-        }
-    };
-    let val_base = match parse_jbyte_array(&mut env, val_base) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return std::ptr::null_mut();
-        }
-    };
-    let rand_base = match parse_jbyte_array(&mut env, rand_base) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return std::ptr::null_mut();
-        }
-    };
-
-    match core_range_proof(numeric_value, r, val_base, rand_base, num_bits) {
-        Ok(result) => match new_byte_array_pair(&mut env, &result.proof, &result.comm) {
-            Ok(value) => value,
-            Err(error) => {
-                throw_java(&mut env, error);
-                std::ptr::null_mut()
-            }
-        },
-        Err(error) => {
-            throw_java(&mut env, sanitize_external_error(error));
-            std::ptr::null_mut()
-        }
-    }
 }
 
 #[no_mangle]
@@ -264,67 +190,6 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
         Err(error) => {
             throw_java(&mut env, sanitize_external_error(error));
             std::ptr::null_mut()
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_ConfidentialAssetBindingsModule_verifyProof(
-    mut env: JNIEnv,
-    _class: JClass,
-    proof: jbyteArray,
-    comm: jbyteArray,
-    val_base: jbyteArray,
-    rand_base: jbyteArray,
-    num_bits: jint,
-) -> jboolean {
-    let num_bits = match usize::try_from(num_bits) {
-        Ok(value) => value,
-        Err(_) => {
-            throw_java(&mut env, "num_bits must be non-negative");
-            return JNI_FALSE;
-        }
-    };
-    if let Err(error) = validate_range_num_bits(num_bits) {
-        throw_java(&mut env, error);
-        return JNI_FALSE;
-    }
-
-    let proof = match parse_jbyte_array(&mut env, proof) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return JNI_FALSE;
-        }
-    };
-    let comm = match parse_jbyte_array(&mut env, comm) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return JNI_FALSE;
-        }
-    };
-    let val_base = match parse_jbyte_array(&mut env, val_base) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return JNI_FALSE;
-        }
-    };
-    let rand_base = match parse_jbyte_array(&mut env, rand_base) {
-        Ok(value) => value,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return JNI_FALSE;
-        }
-    };
-
-    match core_verify_proof(proof, comm, val_base, rand_base, num_bits) {
-        Ok(true) => JNI_TRUE,
-        Ok(false) => JNI_FALSE,
-        Err(error) => {
-            throw_java(&mut env, sanitize_external_error(error));
-            JNI_FALSE
         }
     }
 }
