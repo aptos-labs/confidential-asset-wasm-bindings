@@ -1,8 +1,8 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ConfidentialAssetsBindingsModuleEvents } from './ConfidentialAssetsBindings.types';
+import { ConfidentialAssetBindingsModuleEvents } from './ConfidentialAssetBindings.types';
 
-declare class ConfidentialAssetBindingsModule extends NativeModule<ConfidentialAssetsBindingsModuleEvents> {
+declare class ConfidentialAssetBindingsModule extends NativeModule<ConfidentialAssetBindingsModuleEvents> {
   batchRangeProof(
     valuesFlat: Uint8Array,
     blindingsFlat: Uint8Array,
@@ -25,4 +25,4 @@ declare class ConfidentialAssetBindingsModule extends NativeModule<ConfidentialA
 }
 
 // This call loads the native module object from the JSI.
-export default requireNativeModule<ConfidentialAssetBindingsModule>('ConfidentialAssetsBindings');
+export default requireNativeModule<ConfidentialAssetBindingsModule>('ConfidentialAssetBindings');

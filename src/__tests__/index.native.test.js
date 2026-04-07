@@ -24,7 +24,7 @@ function loadIndexNativeModule() {
 
   const module = { exports: {} };
   const localRequire = (request) => {
-    if (request === "./ConfidentialAssetsBindingsModule") {
+    if (request === "./ConfidentialAssetBindingsModule") {
       return { __esModule: true, default: mockNativeModule };
     }
     return require(request);

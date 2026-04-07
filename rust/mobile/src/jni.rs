@@ -9,7 +9,7 @@ use aptos_confidential_asset_core::{
     },
 };
 use jni::{
-    objects::{JByteArray, JClass, JObject, JString},
+    objects::{JByteArray, JClass, JObject},
     sys::{jboolean, jbyteArray, jint, jlong, jobjectArray, jstring, JNI_FALSE, JNI_TRUE},
     JNIEnv,
 };
@@ -45,12 +45,6 @@ fn new_byte_array_pair(
         .map_err(|error| format!("failed to set second byte[] result: {error}"))?;
 
     Ok(result.into_raw())
-}
-
-fn parse_jstring(env: &mut JNIEnv, input: JString) -> Result<String, String> {
-    env.get_string(&input)
-        .map(|value| value.to_string_lossy().into_owned())
-        .map_err(|error| format!("failed to read Java string: {error}"))
 }
 
 fn parse_jbyte_array(env: &mut JNIEnv, input: jbyteArray) -> Result<Vec<u8>, String> {

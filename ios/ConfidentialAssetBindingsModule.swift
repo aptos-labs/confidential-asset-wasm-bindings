@@ -6,7 +6,7 @@ public class ConfidentialAssetBindingsModule: Module {
   private let discreteLogMaxNumBits: Set<Int> = [16, 32]
   private let batchElementBytes = 32
   private let valueElementBytes = MemoryLayout<UInt64>.size
-  private let solverStateQueue = DispatchQueue(label: "com.aptoslabs.confidentialassetsbindings.solverState")
+  private let solverStateQueue = DispatchQueue(label: "com.aptoslabs.confidentialassetbindings.solverState")
   private var nextSolverHandle = 1
   private var solverPointers: [Int: UnsafeMutableRawPointer] = [:]
 

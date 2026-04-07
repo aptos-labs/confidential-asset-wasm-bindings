@@ -26,5 +26,5 @@ Pod::Spec.new do |s|
 
   s.source_files = '*.swift', 'Rust/Headers/*.h'
   s.public_header_files = 'Rust/Headers/*.h'
-  s.vendored_frameworks = 'Rust/Binaries/ConfidentialAssets.xcframework'
+  s.vendored_frameworks = 'Rust/Binaries/ConfidentialAsset.xcframework'
 end

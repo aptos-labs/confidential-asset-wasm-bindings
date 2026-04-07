@@ -7,7 +7,7 @@ CRATE="aptos_confidential_asset_mobile"
 LIB="lib${CRATE}.a"
 HEADERS_DIR="$ROOT_DIR/ios/Rust/Headers"
 OUTPUT_DIR="$ROOT_DIR/ios/Rust/Binaries"
-FRAMEWORK_DIR="$OUTPUT_DIR/ConfidentialAssets.xcframework"
+FRAMEWORK_DIR="$OUTPUT_DIR/ConfidentialAsset.xcframework"
 
 DEVICE_TARGET="aarch64-apple-ios"
 SIM_TARGETS=("aarch64-apple-ios-sim" "x86_64-apple-ios")
