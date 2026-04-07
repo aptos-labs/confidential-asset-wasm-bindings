@@ -1,473 +1,183 @@
-import { useState } from 'react';
-import { createDefaultManualTestForm } from './fixtures';
 import {
-  prepareManualTestInput,
-  runManualTestStep,
-  runManualTestSuite,
-  runtimeStateToDerivedOutputs,
-} from './runner';
-import {
-  createEmptyRuntimeState,
-  type ManualStepKey,
-  type ManualStepResult,
-} from './types';
-import { budgetFieldId } from './utils';
+  batchRangeProof,
+  batchVerifyProof,
+  solveDiscreteLog,
+} from '@aptos-labs/confidential-asset-bindings';
+import { useEffect, useState } from 'react';
+import './App.css';
 
-const STATUS_COLORS = {
-  pass: '#197a43',
-  warn: '#9a5a00',
-  fail: '#a11c2e',
-} as const;
+function hex(s: string): Uint8Array {
+  const b = new Uint8Array(s.length / 2);
+  for (let i = 0; i < s.length; i += 2)
+    b[i / 2] = parseInt(s.slice(i, i + 2), 16);
+  return b;
+}
+
+const POINT = hex(
+  'e00af9c74d9edb8ebcc160ceec97d531cbd6e2956f9e9162b8e9eda260e82e43',
+);
+const VAL_BASE = hex(
+  'e2f2ae0a6abc4e71a884a961c500515f58e30b6aa582dd8db6a65945e08d2d76',
+);
+const RAND_BASE = hex(
+  '8c9240b456a9e6dc65c377a1048d745f94a08cdb7f44cbcd7b46f34048871134',
+);
+const BLINDINGS = [
+  hex('0909090909090909090909090909090909090909090909090909090909090909'),
+  hex('0909090909090909090909090909090909090909090909090909090909090909'),
+];
+const EXPECTED_COMMS_HEX =
+  '761954bce2b8355c84daae57fcfab355b45c74dec69a9bb9847a93a9fcbd0c35' +
+  'fa76df206c370ad9663d6cc1b54e74815bfc01371ea0e53b7952a7fd02a9106a';
+
+type TestResult = {
+  label: string;
+  pass: boolean;
+  durationMs: number;
+  error?: string;
+};
+
+async function runTests(): Promise<TestResult[]> {
+  const results: TestResult[] = [];
+  let proof: Uint8Array | undefined;
+  let comms: Uint8Array[] | undefined;
+
+  // solveDiscreteLog
+  {
+    const t = performance.now();
+    try {
+      const n = await solveDiscreteLog(POINT, 16);
+      results.push({
+        label: 'solveDiscreteLog',
+        pass: n === 42n,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'solveDiscreteLog',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
+  }
+
+  // batchRangeProof
+  {
+    const t = performance.now();
+    try {
+      const result = await batchRangeProof({
+        v: [1n, 2n],
+        rs: BLINDINGS,
+        valBase: VAL_BASE,
+        randBase: RAND_BASE,
+        numBits: 16,
+      });
+      const flat = new Uint8Array(result.comms.length * 32);
+      result.comms.forEach((c, i) => {
+        flat.set(c, i * 32);
+      });
+      const flatHex = Array.from(flat)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      proof = result.proof;
+      comms = result.comms;
+      results.push({
+        label: 'batchRangeProof',
+        pass:
+          result.proof.length === 608 &&
+          flatHex === EXPECTED_COMMS_HEX &&
+          result.comms.length === 2,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'batchRangeProof',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
+  }
+  if (!proof || !comms) {
+    results.push({
+      label: 'batchVerifyProof',
+      pass: false,
+      durationMs: 0,
+      error: 'batchRangeProof failed',
+    });
+  } else {
+    const t = performance.now();
+    try {
+      const valid = await batchVerifyProof({
+        proof,
+        comms,
+        valBase: VAL_BASE,
+        randBase: RAND_BASE,
+        numBits: 16,
+      });
+      results.push({
+        label: 'batchVerifyProof',
+        pass: valid,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'batchVerifyProof',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
+  }
+
+  return results;
+}
 
 export default function App() {
-  const [form, setForm] = useState(createDefaultManualTestForm);
-  const [runtimeState, setRuntimeState] = useState(createEmptyRuntimeState);
-  const [resultsByKey, setResultsByKey] = useState<
-    Partial<Record<ManualStepKey, ManualStepResult>>
-  >({});
-  const [isRunning, setIsRunning] = useState(false);
+  const [results, setResults] = useState<TestResult[] | null>(null);
 
-  const validation = prepareManualTestInput(form);
-  const derivedOutputs = runtimeStateToDerivedOutputs(runtimeState);
-  const currentBatchValueCount = validation.prepared
-    ? String(validation.prepared.batch.valueCount)
-    : 'Invalid values';
-  const resultList = Object.values(resultsByKey).filter(
-    (result): result is ManualStepResult => Boolean(result),
-  );
-  const resultCounts = resultList.reduce(
-    (counts, result) => {
-      counts[result.status] += 1;
-      return counts;
-    },
-    { pass: 0, warn: 0, fail: 0 },
-  );
-  const hasBatchOutputs =
-    runtimeState.batchProof !== null &&
-    runtimeState.batchCommsFlat !== null &&
-    runtimeState.batchCount !== null;
-
-  function updateField(field: keyof typeof form, value: string) {
-    if (field === 'budgets') return;
-    setForm((current) => ({ ...current, [field]: value }));
+  function run() {
+    setResults(null);
+    runTests().then(setResults);
   }
 
-  function updateBudget(step: ManualStepKey, value: string) {
-    setForm((current) => ({
-      ...current,
-      budgets: { ...current.budgets, [step]: value },
-    }));
-  }
-
-  function resetToDefaults() {
-    setForm(createDefaultManualTestForm());
-    setRuntimeState(createEmptyRuntimeState());
-    setResultsByKey({});
-    setIsRunning(false);
-  }
-
-  function applyResult(result: ManualStepResult) {
-    setResultsByKey((current) => ({ ...current, [result.key]: result }));
-  }
-
-  async function runSingle(step: ManualStepKey) {
-    const preparedInput = validation.prepared;
-    if (isRunning || !preparedInput) return;
-    setIsRunning(true);
-    try {
-      const execution = await runManualTestStep(
-        preparedInput,
-        step,
-        runtimeState,
-      );
-      setRuntimeState(execution.runtimeState);
-      applyResult(execution.result);
-    } finally {
-      setIsRunning(false);
-    }
-  }
-
-  async function runAll() {
-    const preparedInput = validation.prepared;
-    if (isRunning || !preparedInput) return;
-    setIsRunning(true);
-    try {
-      const execution = await runManualTestSuite(preparedInput);
-      setRuntimeState(execution.runtimeState);
-      setResultsByKey(
-        Object.fromEntries(
-          execution.results.map((result) => [result.key, result]),
-        ) as Partial<Record<ManualStepKey, ManualStepResult>>,
-      );
-    } finally {
-      setIsRunning(false);
-    }
-  }
-
-  const baseDisabled = isRunning || !validation.prepared;
+  useEffect(run, []);
 
   return (
     <div className="content">
       <div className="header">
-        <div className="header-copy">
-          <span className="title">Confidential Asset Binding</span>
-          <span className="subtitle">
-            Compact manual harness over the public runtime-agnostic facade.
-          </span>
-        </div>
-        <div className="header-actions">
-          <ActionButton
-            label={isRunning ? 'Running...' : 'Run all'}
-            onClick={runAll}
-            disabled={baseDisabled}
-            tone="primary"
-          />
-          <ActionButton
-            label="Reset"
-            onClick={resetToDefaults}
-            disabled={isRunning}
-            tone="secondary"
-          />
-        </div>
+        <span className="title">Confidential Asset Bindings</span>
+        <button
+          type="button"
+          onClick={run}
+          disabled={results === null}
+          className="button"
+        >
+          {results === null ? 'Running...' : 'Run again'}
+        </button>
       </div>
-
-      <div className="summary-bar">
-        <span className="summary-text">
-          {resultList.length > 0
-            ? `${resultCounts.pass} pass, ${resultCounts.warn} warn, ${resultCounts.fail} fail`
-            : 'No function has been executed yet.'}
-        </span>
-      </div>
-
-      {!validation.prepared ? (
-        <div className="callout callout-fail">
-          Fix the inline validation errors before running the bindings facade.
-        </div>
-      ) : null}
-
-      <Card title="Shared Arguments">
-        <CompactField
-          label="valBase"
-          value={form.valBaseHex}
-          onChange={(value) => updateField('valBaseHex', value)}
-          error={validation.errors.valBaseHex}
-          multiline
-        />
-        <CompactField
-          label="randBase"
-          value={form.randBaseHex}
-          onChange={(value) => updateField('randBaseHex', value)}
-          error={validation.errors.randBaseHex}
-          multiline
-        />
-      </Card>
-
-      <FunctionCard
-        signature="solveDiscreteLog(point, maxNumBits)"
-        result={resultsByKey.solveDiscreteLog}
-        budgetValue={form.budgets.solveDiscreteLog}
-        budgetError={validation.errors[budgetFieldId('solveDiscreteLog')]}
-        onBudgetChange={(value) => updateBudget('solveDiscreteLog', value)}
-        onRun={() => runSingle('solveDiscreteLog')}
-        runDisabled={baseDisabled}
-        note="Solves the discrete log for the given EC point using the internal singleton solver."
-      >
-        <CompactField
-          label="point"
-          value={form.solverPointHex}
-          onChange={(value) => updateField('solverPointHex', value)}
-          error={validation.errors.solverPointHex}
-          multiline
-        />
-        <FieldRow>
-          <CompactField
-            label="maxNumBits"
-            value={form.solverMaxNumBits}
-            onChange={(value) => updateField('solverMaxNumBits', value)}
-            error={validation.errors.solverMaxNumBits}
-          />
-          <CompactField
-            label="expectedValue"
-            value={form.expectedSolveValue}
-            onChange={(value) => updateField('expectedSolveValue', value)}
-            error={validation.errors.expectedSolveValue}
-          />
-        </FieldRow>
-      </FunctionCard>
-
-      <FunctionCard
-        signature="batchRangeProof(values, rs, valBase, randBase, numBits)"
-        result={resultsByKey.batchRangeProof}
-        budgetValue={form.budgets.batchRangeProof}
-        budgetError={validation.errors[budgetFieldId('batchRangeProof')]}
-        onBudgetChange={(value) => updateBudget('batchRangeProof', value)}
-        onRun={() => runSingle('batchRangeProof')}
-        runDisabled={baseDisabled}
-        note="Uses shared valBase and randBase above, then stores proof, commsFlat, and count for batchVerifyProof()."
-      >
-        <CompactField
-          label="values"
-          value={form.batchValuesCsv}
-          onChange={(value) => updateField('batchValuesCsv', value)}
-          error={validation.errors.batchValuesCsv}
-        />
-        <CompactField
-          label="blindingsFlat"
-          value={form.batchBlindingsFlatHex}
-          onChange={(value) => updateField('batchBlindingsFlatHex', value)}
-          error={validation.errors.batchBlindingsFlatHex}
-          multiline
-        />
-        <FieldRow>
-          <ReadonlyValue label="valueCount" value={currentBatchValueCount} />
-          <CompactField
-            label="numBits"
-            value={form.batchNumBits}
-            onChange={(value) => updateField('batchNumBits', value)}
-            error={validation.errors.batchNumBits}
-          />
-        </FieldRow>
-        <FieldRow>
-          <CompactField
-            label="expectedProofBytes"
-            value={form.expectedBatchProofBytes}
-            onChange={(value) => updateField('expectedBatchProofBytes', value)}
-            error={validation.errors.expectedBatchProofBytes}
-          />
-          <CompactField
-            label="expectedCount"
-            value={form.expectedBatchCount}
-            onChange={(value) => updateField('expectedBatchCount', value)}
-            error={validation.errors.expectedBatchCount}
-          />
-        </FieldRow>
-        <CompactField
-          label="expectedCommsFlat"
-          value={form.expectedBatchCommsFlatHex}
-          onChange={(value) => updateField('expectedBatchCommsFlatHex', value)}
-          error={validation.errors.expectedBatchCommsFlatHex}
-          multiline
-        />
-        <ReadonlyValue
-          label="proof"
-          value={derivedOutputs.batchProofHex || 'Not generated yet'}
-          multiline
-        />
-        <ReadonlyValue
-          label="commsFlat"
-          value={derivedOutputs.batchCommsFlatHex || 'Not generated yet'}
-          multiline
-        />
-        <ReadonlyValue
-          label="commCount"
-          value={derivedOutputs.batchCount || 'Not generated yet'}
-        />
-      </FunctionCard>
-
-      <FunctionCard
-        signature="batchVerifyProof(proof, comms, valBase, randBase, numBits)"
-        result={resultsByKey.batchVerifyProof}
-        budgetValue={form.budgets.batchVerifyProof}
-        budgetError={validation.errors[budgetFieldId('batchVerifyProof')]}
-        onBudgetChange={(value) => updateBudget('batchVerifyProof', value)}
-        onRun={() => runSingle('batchVerifyProof')}
-        runDisabled={baseDisabled || !hasBatchOutputs}
-        note="Consumes the last proof, commsFlat, and count produced by batchRangeProof()."
-      >
-        <ReadonlyValue
-          label="proof"
-          value={derivedOutputs.batchProofHex || 'Run batchRangeProof() first'}
-          multiline
-        />
-        <ReadonlyValue
-          label="commsFlat"
-          value={
-            derivedOutputs.batchCommsFlatHex || 'Run batchRangeProof() first'
-          }
-          multiline
-        />
-        <FieldRow>
-          <ReadonlyValue
-            label="commCount"
-            value={derivedOutputs.batchCount || 'Run batchRangeProof() first'}
-          />
-          <CompactField
-            label="numBits"
-            value={form.batchNumBits}
-            onChange={(value) => updateField('batchNumBits', value)}
-            error={validation.errors.batchNumBits}
-          />
-        </FieldRow>
-      </FunctionCard>
-    </div>
-  );
-}
-
-function Card(props: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="card">
-      <span className="card-title">{props.title}</span>
-      {props.children}
-    </div>
-  );
-}
-
-function FunctionCard(props: {
-  signature: string;
-  result?: ManualStepResult;
-  budgetValue: string;
-  budgetError?: string;
-  onBudgetChange: (value: string) => void;
-  onRun: () => void;
-  runDisabled: boolean;
-  note?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="card">
-      <div className="function-header">
-        <div className="function-header-copy">
-          <span className="signature">{props.signature}</span>
-          {props.note ? <span className="note">{props.note}</span> : null}
-        </div>
-        <ActionButton
-          label="Run"
-          onClick={props.onRun}
-          disabled={props.runDisabled}
-          tone="primary"
-          compact
-        />
-      </div>
-
-      <FieldRow>
-        <CompactField
-          label="budgetMs"
-          value={props.budgetValue}
-          onChange={props.onBudgetChange}
-          error={props.budgetError}
-        />
-      </FieldRow>
-
-      {props.children}
-
-      <ResultStrip result={props.result} />
-    </div>
-  );
-}
-
-function FieldRow(props: { children: React.ReactNode }) {
-  return <div className="field-row">{props.children}</div>;
-}
-
-function CompactField(props: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="field">
-      <span className="label">{props.label}</span>
-      {props.multiline ? (
-        <textarea
-          spellCheck={false}
-          autoCapitalize="none"
-          autoCorrect="off"
-          className={[
-            'input',
-            'input-multiline',
-            props.error ? 'input-error' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
-          rows={3}
-        />
+      {results === null ? (
+        <span className="idle-text">Running...</span>
       ) : (
-        <input
-          spellCheck={false}
-          autoCapitalize="none"
-          autoCorrect="off"
-          className={['input', props.error ? 'input-error' : '']
-            .filter(Boolean)
-            .join(' ')}
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
-        />
-      )}
-      {props.error ? <span className="error-text">{props.error}</span> : null}
-    </div>
-  );
-}
-
-function ReadonlyValue(props: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="field">
-      <span className="label">{props.label}</span>
-      {props.multiline ? (
-        <textarea
-          readOnly
-          className="input input-multiline input-readonly"
-          value={props.value}
-          rows={3}
-        />
-      ) : (
-        <input readOnly className="input input-readonly" value={props.value} />
+        results.map((r) => (
+          <div
+            key={r.label}
+            className={`row ${r.pass ? 'row-pass' : 'row-fail'}`}
+          >
+            <div className="row-header">
+              <span className="row-label">{r.label}</span>
+              <span
+                className={`row-status ${r.pass ? 'status-pass' : 'status-fail'}`}
+              >
+                {r.pass ? 'PASS' : 'FAIL'}
+              </span>
+            </div>
+            <span className="row-duration">{r.durationMs.toFixed(1)} ms</span>
+            {r.error ? <span className="row-error">{r.error}</span> : null}
+          </div>
+        ))
       )}
     </div>
-  );
-}
-
-function ResultStrip(props: { result?: ManualStepResult }) {
-  if (!props.result) {
-    return <span className="idle-text">Not run yet.</span>;
-  }
-
-  const color = STATUS_COLORS[props.result.status];
-
-  return (
-    <div className="result-strip" style={{ borderColor: color }}>
-      <div className="result-strip-header">
-        <span className="result-status" style={{ color }}>
-          {props.result.status.toUpperCase()}
-        </span>
-        <span className="result-duration">
-          {props.result.durationMs.toFixed(1)} ms
-        </span>
-      </div>
-      <span className="result-text">Actual: {props.result.summary}</span>
-      <span className="result-text">Assertion: {props.result.assertion}</span>
-    </div>
-  );
-}
-
-function ActionButton(props: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  tone: 'primary' | 'secondary';
-  compact?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={props.disabled}
-      onClick={props.onClick}
-      className={[
-        'button',
-        props.compact ? 'button-compact' : '',
-        props.tone === 'primary' ? 'button-primary' : 'button-secondary',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {props.label}
-    </button>
   );
 }

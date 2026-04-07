@@ -11,244 +11,97 @@ body {
 }
 
 .content {
-  max-width: 640px;
+  max-width: 480px;
   margin: 0 auto;
   padding: 36px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* Header */
 .header {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.header-copy {
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #132033;
+}
+
+.button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #132033;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.idle-text {
+  font-size: 13px;
+  color: #6b7b8f;
+}
+
+.row {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #132033;
+.row-pass {
+  background: #e8f5ee;
+  border-color: #a3d4b5;
 }
 
-.subtitle {
-  font-size: 13px;
-  line-height: 18px;
-  color: #4f6179;
-}
-
-.header-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-}
-
-/* Summary bar */
-.summary-bar {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.summary-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #27415f;
-}
-
-/* Callout */
-.callout {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid;
-  font-size: 13px;
-  line-height: 18px;
-  color: #132033;
-}
-
-.callout-fail {
+.row-fail {
   background: #fdecef;
   border-color: #f2b5bf;
 }
 
-/* Card */
-.card {
-  padding: 12px;
-  border-radius: 14px;
-  background: #fff;
+.row-header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #132033;
-}
-
-/* Function card header */
-.function-header {
-  display: flex;
-  flex-direction: row;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
 }
 
-.function-header-copy {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.signature {
-  font-size: 14px;
+.row-label {
+  font-size: 13px;
   font-weight: 700;
   color: #132033;
 }
 
-.note {
+.row-status {
   font-size: 12px;
-  line-height: 16px;
-  color: #5e7087;
-}
-
-/* Field row */
-.field-row {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-}
-
-/* Field */
-.field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #27415f;
-}
-
-.input {
-  border: 1px solid #c8d0da;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 13px;
-  color: #132033;
-  background: #fbfcfd;
-  font-family: inherit;
-  outline: none;
-  width: 100%;
-}
-
-.input:focus {
-  border-color: #8ea6c4;
-}
-
-.input-multiline {
-  min-height: 72px;
-  resize: vertical;
-  vertical-align: top;
-}
-
-.input-error {
-  border-color: #c0394b;
-}
-
-.input-readonly {
-  background: #eef2f6;
-  color: #4f6179;
-  cursor: default;
-}
-
-.error-text {
-  font-size: 11px;
-  color: #a11c2e;
-}
-
-/* Buttons */
-.button {
-  border-radius: 10px;
-  padding: 10px 14px;
-  min-width: 88px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-}
-
-.button-compact {
-  min-width: 72px;
-  padding: 8px 12px;
-}
-
-.button-primary {
-  background: #132033;
-  color: #fff;
-}
-
-.button-secondary {
-  background: #fff;
-  color: #132033;
-  border: 1px solid #c8d0da;
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Result strip */
-.result-strip {
-  border: 1px solid;
-  border-radius: 10px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #fcfdff;
-}
-
-.result-strip-header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.result-status {
-  font-size: 11px;
   font-weight: 800;
 }
 
-.result-duration {
+.status-pass {
+  color: #197a43;
+}
+
+.status-fail {
+  color: #a11c2e;
+}
+
+.row-duration {
+  font-size: 12px;
+  color: #4f6179;
+}
+
+.row-error {
   font-size: 11px;
-  color: #5e7087;
-}
-
-.result-text {
-  font-size: 12px;
-  line-height: 16px;
-  color: #27415f;
-  word-break: break-all;
-}
-
-.idle-text {
-  font-size: 12px;
-  color: #6b7b8f;
+  color: #a11c2e;
 }

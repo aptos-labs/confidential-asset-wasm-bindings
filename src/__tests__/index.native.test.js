@@ -36,7 +36,7 @@ function loadIndexNativeModule() {
   return module.exports;
 }
 
-const { batchRangeProof, batchVerifyProof, disposeSolver, solveDiscreteLog } =
+const { batchRangeProof, batchVerifyProof, solveDiscreteLog } =
   loadIndexNativeModule();
 
 const makeBytes = (length, value = 1) => new Uint8Array(length).fill(value);

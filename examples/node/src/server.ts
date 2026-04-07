@@ -1,148 +1,162 @@
 import http from 'node:http';
-import { createDefaultManualTestForm } from './fixtures.js';
+import { performance } from 'node:perf_hooks';
 import {
-  prepareManualTestInput,
-  runManualTestStep,
-  runManualTestSuite,
-} from './runner.js';
-import {
-  createEmptyRuntimeState,
-  MANUAL_STEP_KEYS,
-  type ManualStepKey,
-  type ManualTestFormState,
-} from './types.js';
+  batchRangeProof,
+  batchVerifyProof,
+  solveDiscreteLog,
+} from '@aptos-labs/confidential-asset-bindings';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
-async function readBody(req: http.IncomingMessage): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString();
-      if (!raw) {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(raw));
-      } catch {
-        reject(new Error('Invalid JSON body'));
-      }
+function hex(s: string): Uint8Array {
+  const b = new Uint8Array(s.length / 2);
+  for (let i = 0; i < s.length; i += 2)
+    b[i / 2] = parseInt(s.slice(i, i + 2), 16);
+  return b;
+}
+
+const POINT = hex(
+  'e00af9c74d9edb8ebcc160ceec97d531cbd6e2956f9e9162b8e9eda260e82e43',
+);
+const VAL_BASE = hex(
+  'e2f2ae0a6abc4e71a884a961c500515f58e30b6aa582dd8db6a65945e08d2d76',
+);
+const RAND_BASE = hex(
+  '8c9240b456a9e6dc65c377a1048d745f94a08cdb7f44cbcd7b46f34048871134',
+);
+const BLINDINGS = [
+  hex('0909090909090909090909090909090909090909090909090909090909090909'),
+  hex('0909090909090909090909090909090909090909090909090909090909090909'),
+];
+const EXPECTED_COMMS_HEX =
+  '761954bce2b8355c84daae57fcfab355b45c74dec69a9bb9847a93a9fcbd0c35' +
+  'fa76df206c370ad9663d6cc1b54e74815bfc01371ea0e53b7952a7fd02a9106a';
+
+type TestResult = {
+  label: string;
+  pass: boolean;
+  durationMs: number;
+  error?: string;
+};
+
+async function runTests(): Promise<TestResult[]> {
+  const results: TestResult[] = [];
+  let proof: Uint8Array | undefined;
+  let comms: Uint8Array[] | undefined;
+
+  // solveDiscreteLog
+  {
+    const t = performance.now();
+    try {
+      const n = await solveDiscreteLog(POINT, 16);
+      results.push({
+        label: 'solveDiscreteLog',
+        pass: n === 42n,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'solveDiscreteLog',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
+  }
+
+  // batchRangeProof
+  {
+    const t = performance.now();
+    try {
+      const result = await batchRangeProof({
+        v: [1n, 2n],
+        rs: BLINDINGS,
+        valBase: VAL_BASE,
+        randBase: RAND_BASE,
+        numBits: 16,
+      });
+      const flat = new Uint8Array(result.comms.length * 32);
+      result.comms.forEach((c, i) => {
+        flat.set(c, i * 32);
+      });
+      const flatHex = Array.from(flat)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      proof = result.proof;
+      comms = result.comms;
+      results.push({
+        label: 'batchRangeProof',
+        pass:
+          result.proof.length === 608 &&
+          flatHex === EXPECTED_COMMS_HEX &&
+          result.comms.length === 2,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'batchRangeProof',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
+  }
+  if (!proof || !comms) {
+    results.push({
+      label: 'batchVerifyProof',
+      pass: false,
+      durationMs: 0,
+      error: 'batchRangeProof failed',
     });
-    req.on('error', reject);
-  });
-}
-
-function send(res: http.ServerResponse, status: number, body: unknown): void {
-  const payload = JSON.stringify(body, null, 2);
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-  });
-  res.end(payload);
-}
-
-function mergeForm(overrides: unknown): ManualTestFormState {
-  const defaults = createDefaultManualTestForm();
-  if (overrides && typeof overrides === 'object') {
-    return { ...defaults, ...(overrides as Partial<ManualTestFormState>) };
-  }
-  return defaults;
-}
-
-async function handleRunAll(
-  res: http.ServerResponse,
-  overrides: unknown,
-): Promise<void> {
-  const form = mergeForm(overrides);
-  const { errors, prepared } = prepareManualTestInput(form);
-
-  if (!prepared) {
-    const first = Object.values(errors)[0] ?? 'Validation failed';
-    send(res, 400, { error: first, errors });
-    return;
+  } else {
+    const t = performance.now();
+    try {
+      const valid = await batchVerifyProof({
+        proof,
+        comms,
+        valBase: VAL_BASE,
+        randBase: RAND_BASE,
+        numBits: 16,
+      });
+      results.push({
+        label: 'batchVerifyProof',
+        pass: valid,
+        durationMs: performance.now() - t,
+      });
+    } catch (e) {
+      results.push({
+        label: 'batchVerifyProof',
+        pass: false,
+        durationMs: performance.now() - t,
+        error: String(e),
+      });
+    }
   }
 
-  const result = await runManualTestSuite(prepared);
-  send(res, 200, result);
-}
-
-async function handleRunStep(
-  res: http.ServerResponse,
-  step: ManualStepKey,
-  overrides: unknown,
-): Promise<void> {
-  const form = mergeForm(overrides);
-  const { errors, prepared } = prepareManualTestInput(form);
-
-  if (!prepared) {
-    const first = Object.values(errors)[0] ?? 'Validation failed';
-    send(res, 400, { error: first, errors });
-    return;
-  }
-
-  const result = await runManualTestStep(
-    prepared,
-    step,
-    createEmptyRuntimeState(),
-  );
-  send(res, 200, result);
+  return results;
 }
 
 const server = http.createServer(async (req, res) => {
-  const method = req.method ?? 'GET';
-  const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
-  const path = url.pathname;
-
-  try {
-    // GET /health
-    if (method === 'GET' && path === '/health') {
-      send(res, 200, { ok: true });
-      return;
+  if (req.method === 'GET' && req.url === '/run-all') {
+    try {
+      const results = await runTests();
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(JSON.stringify(results, null, 2));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(e) }));
     }
-
-    // GET /run-all — default fixtures, no body needed (easy browser/curl validation)
-    if (method === 'GET' && path === '/run-all') {
-      await handleRunAll(res, {});
-      return;
-    }
-
-    // POST /run-all — optional JSON body with form overrides
-    if (method === 'POST' && path === '/run-all') {
-      const body = await readBody(req);
-      await handleRunAll(res, body);
-      return;
-    }
-
-    // POST /run/:step
-    if (method === 'POST' && path.startsWith('/run/')) {
-      const stepKey = path.slice('/run/'.length) as ManualStepKey;
-      if (!(MANUAL_STEP_KEYS as readonly string[]).includes(stepKey)) {
-        send(res, 404, {
-          error: `Unknown step "${stepKey}". Valid steps: ${MANUAL_STEP_KEYS.join(', ')}`,
-        });
-        return;
-      }
-      const body = await readBody(req);
-      await handleRunStep(res, stepKey, body);
-      return;
-    }
-
-    send(res, 404, { error: 'Not found' });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    send(res, 500, { error: message });
+    return;
   }
+
+  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Not found' }));
 });
 
 server.listen(PORT, () => {
   console.log(`Listening on http://localhost:${PORT}`);
-  console.log();
-  console.log('  GET  /health         liveness check');
-  console.log('  GET  /run-all        run all 5 steps with default fixtures');
-  console.log('  POST /run-all        same with optional JSON body overrides');
-  console.log(
-    `  POST /run/:step      run one step (steps: ${MANUAL_STEP_KEYS.join(', ')})`,
-  );
+  console.log('  GET /run-all   run all tests with hardcoded values');
 });
