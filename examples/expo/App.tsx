@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState } from 'react';
 import {
+  type KeyboardTypeOptions,
   Platform,
   Pressable,
   ScrollView,
@@ -7,53 +8,65 @@ import {
   Text,
   TextInput,
   View,
-  type KeyboardTypeOptions,
-} from 'react-native'
-import { createDefaultManualTestForm } from './src/fixtures'
-import { prepareManualTestInput, runManualTestStep, runManualTestSuite, runtimeStateToDerivedOutputs } from './src/runner'
+} from 'react-native';
+import { createDefaultManualTestForm } from './src/fixtures';
+import {
+  prepareManualTestInput,
+  runManualTestStep,
+  runManualTestSuite,
+  runtimeStateToDerivedOutputs,
+} from './src/runner';
 import {
   createEmptyRuntimeState,
   type ManualStepKey,
   type ManualStepResult,
-} from './src/types'
-import { budgetFieldId } from './src/utils'
+} from './src/types';
+import { budgetFieldId } from './src/utils';
 
 const STATUS_COLORS = {
   pass: '#197a43',
   warn: '#9a5a00',
   fail: '#a11c2e',
-} as const
+} as const;
 
 export default function App() {
-  const [form, setForm] = useState(createDefaultManualTestForm)
-  const [runtimeState, setRuntimeState] = useState(createEmptyRuntimeState)
-  const [resultsByKey, setResultsByKey] = useState<Partial<Record<ManualStepKey, ManualStepResult>>>({})
-  const [isRunning, setIsRunning] = useState(false)
+  const [form, setForm] = useState(createDefaultManualTestForm);
+  const [runtimeState, setRuntimeState] = useState(createEmptyRuntimeState);
+  const [resultsByKey, setResultsByKey] = useState<
+    Partial<Record<ManualStepKey, ManualStepResult>>
+  >({});
+  const [isRunning, setIsRunning] = useState(false);
 
-  const isWeb = Platform.OS === 'web'
-  const validation = prepareManualTestInput(form)
-  const derivedOutputs = runtimeStateToDerivedOutputs(runtimeState)
-  const currentBatchValueCount = validation.prepared ? String(validation.prepared.batch.valueCount) : 'Invalid values'
-  const resultList = Object.values(resultsByKey).filter((result): result is ManualStepResult => Boolean(result))
+  const isWeb = Platform.OS === 'web';
+  const validation = prepareManualTestInput(form);
+  const derivedOutputs = runtimeStateToDerivedOutputs(runtimeState);
+  const currentBatchValueCount = validation.prepared
+    ? String(validation.prepared.batch.valueCount)
+    : 'Invalid values';
+  const resultList = Object.values(resultsByKey).filter(
+    (result): result is ManualStepResult => Boolean(result),
+  );
   const resultCounts = resultList.reduce(
     (counts, result) => {
-      counts[result.status] += 1
-      return counts
+      counts[result.status] += 1;
+      return counts;
     },
-    { pass: 0, warn: 0, fail: 0 }
-  )
+    { pass: 0, warn: 0, fail: 0 },
+  );
   const hasBatchOutputs =
-    runtimeState.batchProof !== null && runtimeState.batchCommsFlat !== null && runtimeState.batchCount !== null
+    runtimeState.batchProof !== null &&
+    runtimeState.batchCommsFlat !== null &&
+    runtimeState.batchCount !== null;
 
   function updateField(field: keyof typeof form, value: string) {
     if (field === 'budgets') {
-      return
+      return;
     }
 
     setForm((current) => ({
       ...current,
       [field]: value,
-    }))
+    }));
   }
 
   function updateBudget(step: ManualStepKey, value: string) {
@@ -63,64 +76,68 @@ export default function App() {
         ...current.budgets,
         [step]: value,
       },
-    }))
+    }));
   }
 
   function resetToDefaults() {
-    setForm(createDefaultManualTestForm())
-    setRuntimeState(createEmptyRuntimeState())
-    setResultsByKey({})
-    setIsRunning(false)
+    setForm(createDefaultManualTestForm());
+    setRuntimeState(createEmptyRuntimeState());
+    setResultsByKey({});
+    setIsRunning(false);
   }
 
   function applyResult(result: ManualStepResult) {
     setResultsByKey((current) => ({
       ...current,
       [result.key]: result,
-    }))
+    }));
   }
 
   async function runSingle(step: ManualStepKey) {
-    const preparedInput = validation.prepared
+    const preparedInput = validation.prepared;
 
     if (isWeb || isRunning || !preparedInput) {
-      return
+      return;
     }
 
-    setIsRunning(true)
+    setIsRunning(true);
 
     try {
-      const execution = await runManualTestStep(preparedInput, step, runtimeState)
-      setRuntimeState(execution.runtimeState)
-      applyResult(execution.result)
+      const execution = await runManualTestStep(
+        preparedInput,
+        step,
+        runtimeState,
+      );
+      setRuntimeState(execution.runtimeState);
+      applyResult(execution.result);
     } finally {
-      setIsRunning(false)
+      setIsRunning(false);
     }
   }
 
   async function runAll() {
-    const preparedInput = validation.prepared
+    const preparedInput = validation.prepared;
 
     if (isWeb || isRunning || !preparedInput) {
-      return
+      return;
     }
 
-    setIsRunning(true)
+    setIsRunning(true);
 
     try {
-      const execution = await runManualTestSuite(preparedInput)
-      setRuntimeState(execution.runtimeState)
+      const execution = await runManualTestSuite(preparedInput);
+      setRuntimeState(execution.runtimeState);
       setResultsByKey(
-        Object.fromEntries(execution.results.map((result) => [result.key, result])) as Partial<
-          Record<ManualStepKey, ManualStepResult>
-        >
-      )
+        Object.fromEntries(
+          execution.results.map((result) => [result.key, result]),
+        ) as Partial<Record<ManualStepKey, ManualStepResult>>,
+      );
     } finally {
-      setIsRunning(false)
+      setIsRunning(false);
     }
   }
 
-  const baseDisabled = isWeb || isRunning || !validation.prepared
+  const baseDisabled = isWeb || isRunning || !validation.prepared;
 
   return (
     <View style={styles.screen}>
@@ -128,11 +145,23 @@ export default function App() {
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Confidential Asset Binding</Text>
-            <Text style={styles.subtitle}>Compact manual harness over the public runtime-agnostic facade.</Text>
+            <Text style={styles.subtitle}>
+              Compact manual harness over the public runtime-agnostic facade.
+            </Text>
           </View>
           <View style={styles.headerActions}>
-            <ActionButton label={isRunning ? 'Running...' : 'Run all'} onPress={runAll} disabled={baseDisabled} tone="primary" />
-            <ActionButton label="Reset" onPress={resetToDefaults} disabled={isRunning} tone="secondary" />
+            <ActionButton
+              label={isRunning ? 'Running...' : 'Run all'}
+              onPress={runAll}
+              disabled={baseDisabled}
+              tone="primary"
+            />
+            <ActionButton
+              label="Reset"
+              onPress={resetToDefaults}
+              disabled={isRunning}
+              tone="secondary"
+            />
           </View>
         </View>
 
@@ -146,7 +175,8 @@ export default function App() {
 
         {isWeb ? (
           <Callout tone="warn">
-            This harness is native-only. Web renders the inputs for inspection, but all run buttons stay disabled.
+            This harness is native-only. Web renders the inputs for inspection,
+            but all run buttons stay disabled.
           </Callout>
         ) : null}
 
@@ -181,7 +211,8 @@ export default function App() {
           onBudgetChange={(value) => updateBudget('solveDiscreteLog', value)}
           onRun={() => runSingle('solveDiscreteLog')}
           runDisabled={baseDisabled}
-          note="Solves the discrete log for the given EC point using the internal singleton solver.">
+          note="Solves the discrete log for the given EC point using the internal singleton solver."
+        >
           <CompactField
             label="point"
             value={form.solverPointHex}
@@ -215,7 +246,8 @@ export default function App() {
           onBudgetChange={(value) => updateBudget('batchRangeProof', value)}
           onRun={() => runSingle('batchRangeProof')}
           runDisabled={baseDisabled}
-          note="Uses shared valBase and randBase above, then stores proof, commsFlat, and count for batchVerifyProof().">
+          note="Uses shared valBase and randBase above, then stores proof, commsFlat, and count for batchVerifyProof()."
+        >
           <CompactField
             label="values"
             value={form.batchValuesCsv}
@@ -225,7 +257,9 @@ export default function App() {
           <CompactField
             label="blindingsFlat"
             value={form.batchBlindingsFlatHex}
-            onChangeText={(value) => updateField('batchBlindingsFlatHex', value)}
+            onChangeText={(value) =>
+              updateField('batchBlindingsFlatHex', value)
+            }
             error={validation.errors.batchBlindingsFlatHex}
             multiline
           />
@@ -243,7 +277,9 @@ export default function App() {
             <CompactField
               label="expectedProofBytes"
               value={form.expectedBatchProofBytes}
-              onChangeText={(value) => updateField('expectedBatchProofBytes', value)}
+              onChangeText={(value) =>
+                updateField('expectedBatchProofBytes', value)
+              }
               error={validation.errors.expectedBatchProofBytes}
               keyboardType="number-pad"
             />
@@ -258,13 +294,26 @@ export default function App() {
           <CompactField
             label="expectedCommsFlat"
             value={form.expectedBatchCommsFlatHex}
-            onChangeText={(value) => updateField('expectedBatchCommsFlatHex', value)}
+            onChangeText={(value) =>
+              updateField('expectedBatchCommsFlatHex', value)
+            }
             error={validation.errors.expectedBatchCommsFlatHex}
             multiline
           />
-          <ReadonlyValue label="proof" value={derivedOutputs.batchProofHex || 'Not generated yet'} multiline />
-          <ReadonlyValue label="commsFlat" value={derivedOutputs.batchCommsFlatHex || 'Not generated yet'} multiline />
-          <ReadonlyValue label="commCount" value={derivedOutputs.batchCount || 'Not generated yet'} />
+          <ReadonlyValue
+            label="proof"
+            value={derivedOutputs.batchProofHex || 'Not generated yet'}
+            multiline
+          />
+          <ReadonlyValue
+            label="commsFlat"
+            value={derivedOutputs.batchCommsFlatHex || 'Not generated yet'}
+            multiline
+          />
+          <ReadonlyValue
+            label="commCount"
+            value={derivedOutputs.batchCount || 'Not generated yet'}
+          />
         </FunctionCard>
 
         <FunctionCard
@@ -275,15 +324,27 @@ export default function App() {
           onBudgetChange={(value) => updateBudget('batchVerifyProof', value)}
           onRun={() => runSingle('batchVerifyProof')}
           runDisabled={baseDisabled || !hasBatchOutputs}
-          note="Consumes the last proof, commsFlat, and count produced by batchRangeProof().">
-          <ReadonlyValue label="proof" value={derivedOutputs.batchProofHex || 'Run batchRangeProof() first'} multiline />
+          note="Consumes the last proof, commsFlat, and count produced by batchRangeProof()."
+        >
+          <ReadonlyValue
+            label="proof"
+            value={
+              derivedOutputs.batchProofHex || 'Run batchRangeProof() first'
+            }
+            multiline
+          />
           <ReadonlyValue
             label="commsFlat"
-            value={derivedOutputs.batchCommsFlatHex || 'Run batchRangeProof() first'}
+            value={
+              derivedOutputs.batchCommsFlatHex || 'Run batchRangeProof() first'
+            }
             multiline
           />
           <FieldRow>
-            <ReadonlyValue label="commCount" value={derivedOutputs.batchCount || 'Run batchRangeProof() first'} />
+            <ReadonlyValue
+              label="commCount"
+              value={derivedOutputs.batchCount || 'Run batchRangeProof() first'}
+            />
             <CompactField
               label="numBits"
               value={form.batchNumBits}
@@ -295,7 +356,7 @@ export default function App() {
         </FunctionCard>
       </ScrollView>
     </View>
-  )
+  );
 }
 
 function Card(props: { title: string; children: React.ReactNode }) {
@@ -304,7 +365,7 @@ function Card(props: { title: string; children: React.ReactNode }) {
       <Text style={styles.cardTitle}>{props.title}</Text>
       {props.children}
     </View>
-  )
+  );
 }
 
 function FunctionCard(props: {
@@ -325,7 +386,13 @@ function FunctionCard(props: {
           <Text style={styles.signature}>{props.signature}</Text>
           {props.note ? <Text style={styles.note}>{props.note}</Text> : null}
         </View>
-        <ActionButton label="Run" onPress={props.onRun} disabled={props.runDisabled} tone="primary" compact />
+        <ActionButton
+          label="Run"
+          onPress={props.onRun}
+          disabled={props.runDisabled}
+          tone="primary"
+          compact
+        />
       </View>
 
       <FieldRow>
@@ -342,11 +409,11 @@ function FunctionCard(props: {
 
       <ResultStrip result={props.result} />
     </View>
-  )
+  );
 }
 
 function FieldRow(props: { children: React.ReactNode }) {
-  return <View style={styles.fieldRow}>{props.children}</View>
+  return <View style={styles.fieldRow}>{props.children}</View>;
 }
 
 function CompactField(props: {
@@ -367,15 +434,23 @@ function CompactField(props: {
         numberOfLines={props.multiline ? 3 : 1}
         onChangeText={props.onChangeText}
         keyboardType={props.keyboardType}
-        style={[styles.input, props.multiline ? styles.multilineInput : null, props.error ? styles.inputError : null]}
+        style={[
+          styles.input,
+          props.multiline ? styles.multilineInput : null,
+          props.error ? styles.inputError : null,
+        ]}
         value={props.value}
       />
       {props.error ? <Text style={styles.errorText}>{props.error}</Text> : null}
     </View>
-  )
+  );
 }
 
-function ReadonlyValue(props: { label: string; value: string; multiline?: boolean }) {
+function ReadonlyValue(props: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{props.label}</Text>
@@ -384,38 +459,51 @@ function ReadonlyValue(props: { label: string; value: string; multiline?: boolea
         multiline={props.multiline}
         numberOfLines={props.multiline ? 3 : 1}
         selectTextOnFocus={false}
-        style={[styles.input, styles.readonlyInput, props.multiline ? styles.multilineInput : null]}
+        style={[
+          styles.input,
+          styles.readonlyInput,
+          props.multiline ? styles.multilineInput : null,
+        ]}
         value={props.value}
       />
     </View>
-  )
+  );
 }
 
 function ResultStrip(props: { result?: ManualStepResult }) {
   if (!props.result) {
-    return <Text style={styles.idleText}>Not run yet.</Text>
+    return <Text style={styles.idleText}>Not run yet.</Text>;
   }
 
-  const color = STATUS_COLORS[props.result.status]
+  const color = STATUS_COLORS[props.result.status];
 
   return (
     <View style={[styles.resultStrip, { borderColor: color }]}>
       <View style={styles.resultStripHeader}>
-        <Text style={[styles.resultStatus, { color }]}>{props.result.status.toUpperCase()}</Text>
-        <Text style={styles.resultDuration}>{props.result.durationMs.toFixed(1)} ms</Text>
+        <Text style={[styles.resultStatus, { color }]}>
+          {props.result.status.toUpperCase()}
+        </Text>
+        <Text style={styles.resultDuration}>
+          {props.result.durationMs.toFixed(1)} ms
+        </Text>
       </View>
       <Text style={styles.resultText}>Actual: {props.result.summary}</Text>
       <Text style={styles.resultText}>Assertion: {props.result.assertion}</Text>
     </View>
-  )
+  );
 }
 
 function Callout(props: { tone: 'warn' | 'fail'; children: React.ReactNode }) {
   return (
-    <View style={[styles.callout, props.tone === 'warn' ? styles.warnCallout : styles.failCallout]}>
+    <View
+      style={[
+        styles.callout,
+        props.tone === 'warn' ? styles.warnCallout : styles.failCallout,
+      ]}
+    >
       <Text style={styles.calloutText}>{props.children}</Text>
     </View>
-  )
+  );
 }
 
 function ActionButton(props: {
@@ -432,14 +520,22 @@ function ActionButton(props: {
       style={[
         styles.button,
         props.compact ? styles.compactButton : null,
-        props.tone === 'primary' ? styles.primaryButton : styles.secondaryButton,
+        props.tone === 'primary'
+          ? styles.primaryButton
+          : styles.secondaryButton,
         props.disabled ? styles.buttonDisabled : null,
-      ]}>
-      <Text style={[styles.buttonText, props.tone === 'secondary' ? styles.secondaryButtonText : null]}>
+      ]}
+    >
+      <Text
+        style={[
+          styles.buttonText,
+          props.tone === 'secondary' ? styles.secondaryButtonText : null,
+        ]}
+      >
         {props.label}
       </Text>
     </Pressable>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -630,4 +726,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#132033',
   },
-})
+});

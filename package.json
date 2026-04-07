@@ -24,9 +24,15 @@
       "default": "./dist/index.mjs"
     }
   },
-  "files": ["dist", "src", "android", "ios", "expo-module.config.json"],
+  "files": [
+    "dist",
+    "src",
+    "android",
+    "ios",
+    "expo-module.config.json"
+  ],
   "scripts": {
-    "build:wasm": "wasm-pack build ./rust/wasm --target web --out-dir ../../build/wasm --release",
+    "build:wasm": "./scripts/build-wasm.sh",
     "build:android": "./scripts/build-android.sh",
     "build:ios": "./scripts/build-ios.sh",
     "build:bindings": "npm run build:wasm && npm run build:android && npm run build:ios",
@@ -34,7 +40,9 @@
     "build:expo": "expo-module build -p tsconfig.json --outDir dist",
     "build": "npm run build:bindings && npm run build:lib && npm run build:expo",
     "changeset": "changeset",
-    "lint": "expo-module lint",
+    "lint": "biome check src examples",
+    "lint:fix": "biome format --write src examples",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p examples/browser/tsconfig.json && tsc --noEmit -p examples/expo/tsconfig.json && tsc --noEmit -p examples/node/tsconfig.json",
     "test": "expo-module test",
     "open:ios": "xed example/ios",
     "open:android": "open -a \"Android Studio\" example/android",
@@ -59,8 +67,8 @@
   "author": "aptoslabs <aptoslabs@aptoslabs.com> (https://github.com/aptos-labs)",
   "license": "Apache-2.0",
   "homepage": "https://github.com/aptos-labs/confidential-asset-bindings#readme",
-  "dependencies": {},
   "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
     "@changesets/cli": "^2.30.0",
     "@types/react": "~19.1.1",
     "expo": "^55.0.11",

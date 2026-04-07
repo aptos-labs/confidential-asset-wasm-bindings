@@ -1,6 +1,6 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ConfidentialAssetBindingsModuleEvents } from './ConfidentialAssetBindings.types';
+import type { ConfidentialAssetBindingsModuleEvents } from './ConfidentialAssetBindings.types';
 
 declare class ConfidentialAssetBindingsModule extends NativeModule<ConfidentialAssetBindingsModuleEvents> {
   batchRangeProof(
@@ -21,8 +21,14 @@ declare class ConfidentialAssetBindingsModule extends NativeModule<ConfidentialA
   ): Promise<boolean>;
   createSolver(): Promise<number>;
   freeSolver(handle: number): Promise<void>;
-  solverSolve(handle: number, y: Uint8Array, maxNumBits: number): Promise<string>;
+  solverSolve(
+    handle: number,
+    y: Uint8Array,
+    maxNumBits: number,
+  ): Promise<string>;
 }
 
 // This call loads the native module object from the JSI.
-export default requireNativeModule<ConfidentialAssetBindingsModule>('ConfidentialAssetBindings');
+export default requireNativeModule<ConfidentialAssetBindingsModule>(
+  'ConfidentialAssetBindings',
+);

@@ -2,17 +2,17 @@ export const MANUAL_STEP_KEYS = [
   'solveDiscreteLog',
   'batchRangeProof',
   'batchVerifyProof',
-] as const
+] as const;
 
-export type ManualStepKey = (typeof MANUAL_STEP_KEYS)[number]
+export type ManualStepKey = (typeof MANUAL_STEP_KEYS)[number];
 
 export const MANUAL_STEP_LABELS: Record<ManualStepKey, string> = {
   solveDiscreteLog: 'solveDiscreteLog',
   batchRangeProof: 'batchRangeProof',
   batchVerifyProof: 'batchVerifyProof',
-}
+};
 
-export type ManualStepStatus = 'pass' | 'warn' | 'fail'
+export type ManualStepStatus = 'pass' | 'warn' | 'fail';
 
 export type ManualTestFormState = {
   solverPointHex: string;
@@ -27,9 +27,9 @@ export type ManualTestFormState = {
   expectedBatchCommsFlatHex: string;
   expectedBatchCount: string;
   budgets: Record<ManualStepKey, string>;
-}
+};
 
-export type ManualValidationErrors = Partial<Record<string, string>>
+export type ManualValidationErrors = Partial<Record<string, string>>;
 
 export type PreparedManualTestInput = {
   solver: {
@@ -51,19 +51,19 @@ export type PreparedManualTestInput = {
     expectedCount: number;
   };
   budgets: Record<ManualStepKey, number>;
-}
+};
 
 export type ManualRuntimeState = {
   batchProof: Uint8Array | null;
   batchCommsFlat: Uint8Array | null;
   batchCount: number | null;
-}
+};
 
 export type ManualDerivedOutputs = {
   batchProofHex: string;
   batchCommsFlatHex: string;
   batchCount: string;
-}
+};
 
 export type ManualStepResult = {
   key: ManualStepKey;
@@ -72,26 +72,26 @@ export type ManualStepResult = {
   durationMs: number;
   summary: string;
   assertion: string;
-}
+};
 
 export type ManualTestRunResult = {
   results: ManualStepResult[];
   runtimeState: ManualRuntimeState;
   derivedOutputs: ManualDerivedOutputs;
-}
+};
 
 export type ManualStepRunResult = {
   result: ManualStepResult;
   runtimeState: ManualRuntimeState;
   derivedOutputs: ManualDerivedOutputs;
-}
+};
 
 export function createEmptyRuntimeState(): ManualRuntimeState {
   return {
     batchProof: null,
     batchCommsFlat: null,
     batchCount: null,
-  }
+  };
 }
 
 export function createEmptyDerivedOutputs(): ManualDerivedOutputs {
@@ -99,5 +99,5 @@ export function createEmptyDerivedOutputs(): ManualDerivedOutputs {
     batchProofHex: '',
     batchCommsFlatHex: '',
     batchCount: '',
-  }
+  };
 }

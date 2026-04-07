@@ -1,7 +1,7 @@
 import init, {
-  DiscreteLogSolver,
   batch_range_proof,
   batch_verify_proof,
+  DiscreteLogSolver,
 } from '../build/wasm/aptos_confidential_asset_wasm';
 
 import pkg from '../package.json';
@@ -23,15 +23,16 @@ const CDN_WASM_URL = `https://unpkg.com/@aptos-labs/confidential-asset-bindings@
 
 async function getNodeModulesWASM(): Promise<string | BufferSource> {
   try {
-    const fs = await import("fs");
-    const path = await import("path");
+    const fs = await import('node:fs');
+    const path = await import('node:path');
 
     const possiblePaths = [
       path.resolve(
-          process.cwd(),
-          "node_modules/@aptos-labs/confidential-asset-bindings/dist/aptos_confidential_asset_wasm_bg.wasm",
+        process.cwd(),
+        'node_modules/@aptos-labs/confidential-asset-bindings/dist/aptos_confidential_asset_wasm_bg.wasm',
       ),
-      new URL("./aptos_confidential_asset_wasm_bg.wasm", import.meta.url).pathname,
+      new URL('./aptos_confidential_asset_wasm_bg.wasm', import.meta.url)
+        .pathname,
     ];
 
     for (const wasmPath of possiblePaths) {
@@ -46,7 +47,7 @@ async function getNodeModulesWASM(): Promise<string | BufferSource> {
 }
 
 async function getWasmSource(): Promise<string | BufferSource> {
-  if (typeof process !== "undefined" && process.versions?.node) {
+  if (typeof process !== 'undefined' && process.versions?.node) {
     return getNodeModulesWASM();
   }
   return CDN_WASM_URL;
@@ -72,12 +73,20 @@ async function ensureWasmInitialized(): Promise<void> {
   await initPromise;
 }
 
-export const batchRangeProof = async (inputs: BatchRangeProofInputs): Promise<BatchRangeProofResult> => {
+export const batchRangeProof = async (
+  inputs: BatchRangeProofInputs,
+): Promise<BatchRangeProofResult> => {
   await ensureWasmInitialized();
 
   const { v, rs, valBase, randBase, numBits = 32 } = inputs;
 
-  const result = batch_range_proof(new BigUint64Array(v), rs, valBase, randBase, numBits);
+  const result = batch_range_proof(
+    new BigUint64Array(v),
+    rs,
+    valBase,
+    randBase,
+    numBits,
+  );
 
   try {
     return {
@@ -89,7 +98,9 @@ export const batchRangeProof = async (inputs: BatchRangeProofInputs): Promise<Ba
   }
 };
 
-export const batchVerifyProof = async (inputs: BatchVerifyRangeProofInputs): Promise<boolean> => {
+export const batchVerifyProof = async (
+  inputs: BatchVerifyRangeProofInputs,
+): Promise<boolean> => {
   await ensureWasmInitialized();
 
   const { proof, comms, valBase, randBase, numBits = 32 } = inputs;
@@ -100,11 +111,16 @@ export const batchVerifyProof = async (inputs: BatchVerifyRangeProofInputs): Pro
 let _discreteLogSolver: DiscreteLogSolver | null = null;
 
 const getDiscreteLogSolver = () => {
-  if (_discreteLogSolver) return _discreteLogSolver;
-  return _discreteLogSolver = new DiscreteLogSolver();
+  if (!_discreteLogSolver) {
+    _discreteLogSolver = new DiscreteLogSolver();
+  }
+  return _discreteLogSolver;
 };
 
-export const solveDiscreteLog = async (y: Uint8Array, maxNumBits: number): Promise<bigint> => {
+export const solveDiscreteLog = async (
+  y: Uint8Array,
+  maxNumBits: number,
+): Promise<bigint> => {
   await ensureWasmInitialized();
   const solver = getDiscreteLogSolver();
   return solver.solve(y, maxNumBits);
