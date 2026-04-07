@@ -4,14 +4,12 @@ export type {
   BatchRangeProofInputs,
   BatchRangeProofResult,
   BatchVerifyRangeProofInputs,
-  SolveDiscreteLogInputs,
 } from './types';
 
 import type {
   BatchRangeProofInputs,
   BatchRangeProofResult,
   BatchVerifyRangeProofInputs,
-  SolveDiscreteLogInputs,
 } from './types';
 
 const RANGE_PROOF_NUM_BITS = new Set([8, 16, 32, 64]);
@@ -78,6 +76,26 @@ function packU64Values(values: bigint[]): Uint8Array {
   return valuesFlat;
 }
 
+/**
+ * Generates a batch Bulletproofs range proof for a set of values.
+ *
+ * Proves that each value in `inputs.v` lies within `[0, 2^numBits)` without
+ * revealing the values themselves. Delegates to the native JSI module.
+ *
+ * @param inputs - Values, blinding factors, base points, and optional bit width.
+ * @returns The serialized proof and the corresponding Pedersen commitments.
+ * @throws If `numBits` is not 8, 16, 32, or 64.
+ * @throws If `rs.length !== v.length` or any blinding factor is not 32 bytes.
+ * @throws If any value is outside the unsigned 64-bit integer range.
+ *
+ * @example
+ * const { proof, comms } = await batchRangeProof({
+ *   v: [100n, 200n],
+ *   rs: [blindingFactor1, blindingFactor2],
+ *   valBase,
+ *   randBase,
+ * });
+ */
 export const batchRangeProof = async (
   inputs: BatchRangeProofInputs,
 ): Promise<BatchRangeProofResult> => {
@@ -129,6 +147,20 @@ export const batchRangeProof = async (
   return { proof: result.proof, comms };
 };
 
+/**
+ * Verifies a batch Bulletproofs range proof.
+ *
+ * Checks that the proof is valid for the given commitments and base points.
+ * Delegates to the native JSI module.
+ *
+ * @param inputs - Proof bytes, commitments, base points, and optional bit width.
+ * @returns `true` if the proof is valid, `false` otherwise.
+ * @throws If `numBits` is not 8, 16, 32, or 64.
+ * @throws If any commitment is not exactly 32 bytes.
+ *
+ * @example
+ * const valid = await batchVerifyProof({ proof, comms, valBase, randBase });
+ */
 export const batchVerifyProof = async (
   inputs: BatchVerifyRangeProofInputs,
 ): Promise<boolean> => {
@@ -162,37 +194,26 @@ const getSolverHandle = () => {
   return _solverHandle;
 };
 
-export const disposeSolver = async (): Promise<void> => {
-  const solverHandle = _solverHandle;
-  _solverHandle = null;
-
-  if (!solverHandle) {
-    return;
-  }
-
-  const handle = await solverHandle;
-  await ConfidentialAssetBindingsModule.freeSolver(handle);
-};
-
-export async function solveDiscreteLog(
-  inputs: SolveDiscreteLogInputs,
-): Promise<bigint>;
-export async function solveDiscreteLog(
+/**
+ * Solves the discrete logarithm for a compressed Ristretto point.
+ *
+ * Given a point `y = n * G`, returns `n` by exhaustive search up to
+ * `2^maxNumBits`. The internal solver is lazily created and reused across
+ * calls. Delegates to the native JSI module.
+ *
+ * @param y - Compressed Ristretto point (32 bytes).
+ * @param maxNumBits - Search space upper bound as a bit width. Must be 16 or 32.
+ * @returns The discrete logarithm `n` such that `n * G == y`.
+ * @throws If `maxNumBits` is not 16 or 32.
+ * @throws If no solution exists within the search space.
+ *
+ * @example
+ * const n = await solveDiscreteLog(pointBytes, 16);
+ */
+export const solveDiscreteLog = async (
   y: Uint8Array,
   maxNumBits: number,
-): Promise<bigint>;
-export async function solveDiscreteLog(
-  yOrInputs: Uint8Array | SolveDiscreteLogInputs,
-  maybeMaxNumBits?: number,
-): Promise<bigint> {
-  const { y, maxNumBits } =
-    yOrInputs instanceof Uint8Array
-      ? { y: yOrInputs, maxNumBits: maybeMaxNumBits }
-      : yOrInputs;
-
-  if (maxNumBits === undefined) {
-    throw new Error('solveDiscreteLog requires maxNumBits.');
-  }
+): Promise<bigint> => {
   assertDiscreteLogMaxNumBits(maxNumBits);
 
   const handle = await getSolverHandle();
@@ -202,4 +223,4 @@ export async function solveDiscreteLog(
     maxNumBits,
   );
   return BigInt(result);
-}
+};

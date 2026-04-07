@@ -4,7 +4,11 @@
     "module": "ES2022",
     "moduleResolution": "bundler",
     "strict": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@aptos-labs/confidential-asset-bindings": ["../../src/index.ts"],
+      "@aptos-labs/confidential-asset-bindings/*": ["../../src/*"]
+    }
   },
   "include": ["src"]
 }

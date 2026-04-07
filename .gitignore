@@ -8,7 +8,7 @@ jsconfig.json
 
 # Xcode
 #
-build/
+build/*
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -65,3 +65,8 @@ rust/target/
 # Native artifacts
 android/src/main/jniLibs/
 ios/Rust/Binaries/
+
+# Exception: wasm type stubs enable typecheck without a full build
+!build/wasm/
+build/wasm/*
+!build/wasm/aptos_confidential_asset_wasm.d.ts

@@ -201,42 +201,4 @@ describe('index.native range proof validation', () => {
     expect(mockNativeModule.createSolver).not.toHaveBeenCalled();
     expect(mockNativeModule.solverSolve).not.toHaveBeenCalled();
   });
-
-  it('supports both solveDiscreteLog call shapes and disposing the cached solver', async () => {
-    mockNativeModule.createSolver.mockResolvedValue(123);
-    mockNativeModule.solverSolve.mockResolvedValue('42');
-
-    await expect(solveDiscreteLog(makeBytes(32, 47), 16)).resolves.toBe(42n);
-    await expect(
-      solveDiscreteLog({ y: makeBytes(32, 48), maxNumBits: 32 }),
-    ).resolves.toBe(42n);
-
-    expect(mockNativeModule.createSolver).toHaveBeenCalledTimes(1);
-    expect(mockNativeModule.solverSolve).toHaveBeenNthCalledWith(
-      1,
-      123,
-      makeBytes(32, 47),
-      16,
-    );
-    expect(mockNativeModule.solverSolve).toHaveBeenNthCalledWith(
-      2,
-      123,
-      makeBytes(32, 48),
-      32,
-    );
-
-    await disposeSolver();
-    expect(mockNativeModule.freeSolver).toHaveBeenCalledWith(123);
-
-    mockNativeModule.createSolver.mockResolvedValue(456);
-    await expect(
-      solveDiscreteLog({ y: makeBytes(32, 49), maxNumBits: 16 }),
-    ).resolves.toBe(42n);
-    expect(mockNativeModule.createSolver).toHaveBeenCalledTimes(2);
-    expect(mockNativeModule.solverSolve).toHaveBeenLastCalledWith(
-      456,
-      makeBytes(32, 49),
-      16,
-    );
-  });
 });

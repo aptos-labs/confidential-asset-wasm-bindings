@@ -9,6 +9,8 @@ wasm-pack build "$REPO_ROOT/rust/wasm" \
     --out-dir "$OUT_DIR" \
     --release
 
+rm "$OUT_DIR"/.gitignore 2>/dev/null || true
+
 wasm_file=$(find "$OUT_DIR" -maxdepth 1 -name "*.wasm" ! -name "*.d.ts" -print -quit 2>/dev/null)
 
 if [ -n "$wasm_file" ]; then
