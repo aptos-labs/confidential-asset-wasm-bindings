@@ -189,7 +189,12 @@ let _solverHandle: Promise<number> | null = null;
 
 const getSolverHandle = () => {
   if (!_solverHandle) {
-    _solverHandle = ConfidentialAssetBindingsModule.createSolver();
+    _solverHandle = ConfidentialAssetBindingsModule.createSolver().catch(
+      (error) => {
+        _solverHandle = null;
+        throw error;
+      },
+    );
   }
   return _solverHandle;
 };

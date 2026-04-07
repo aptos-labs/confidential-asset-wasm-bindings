@@ -42,10 +42,8 @@
     "changeset": "changeset",
     "lint": "biome check src examples",
     "lint:fix": "biome format --write src examples",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p examples/browser/tsconfig.json && tsc --noEmit -p examples/expo/tsconfig.json && tsc --noEmit -p examples/node/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.lib.json && tsc --noEmit -p examples/browser/tsconfig.json && tsc --noEmit -p examples/expo/tsconfig.json && tsc --noEmit -p examples/node/tsconfig.json",
     "test": "expo-module test",
-    "open:ios": "xed example/ios",
-    "open:android": "open -a \"Android Studio\" example/android",
     "release": "npm run build && changeset publish"
   },
   "keywords": [

@@ -16,9 +16,9 @@ wasm_file=$(find "$OUT_DIR" -maxdepth 1 -name "*.wasm" ! -name "*.d.ts" -print -
 if [ -n "$wasm_file" ]; then
     size_bytes=$(stat -f%z "$wasm_file" 2>/dev/null || stat -c%s "$wasm_file")
     if (( size_bytes >= 1048576 )); then
-        size_human=$(printf "%.2f MiB" "$(echo "scale=2; $size_bytes / 1048576" | bc)")
+        size_human=$(printf "%d MiB" "$(( size_bytes / 1048576 ))")
     elif (( size_bytes >= 1024 )); then
-        size_human=$(printf "%.2f KiB" "$(echo "scale=2; $size_bytes / 1024" | bc)")
+        size_human=$(printf "%d KiB" "$(( size_bytes / 1024 ))")
     else
         size_human=$(printf "%d B" "$size_bytes")
     fi
