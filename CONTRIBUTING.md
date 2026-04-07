@@ -1,97 +1,102 @@
-# Contributing
-
-Contributing to `@aptos-labs/confidential-asset-bindings`.
+# Contributing to @aptos-labs/confidential-asset-bindings
 
 ## Prerequisites
 
-Install [mise](https://mise.jdx.dev/) to manage tool versions, then run:
+Install [mise](https://mise.jdx.dev/) to manage exact toolchain versions:
 
 ```bash
 mise install
 ```
 
-This installs the exact Node and Rust versions declared in `.mise.toml`. Alternatively, install them manually: Node 22 and Rust 1.84+, plus [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/).
+This installs Node 22 and Rust 1.94.1 as declared in `.mise.toml`. If you prefer to manage toolchains manually, install those versions yourself and also install [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android), and Xcode command-line tools (for iOS).
 
-Install npm dependencies:
+Then install npm dependencies:
 
 ```bash
 npm install
 ```
 
-## Building
+## Build commands
 
-```bash
-# Full build: WASM → JS bundle
-npm run build
+| Command | What it does |
+|---|---|
+| `npm run build` | Full build: compiles Rust to WASM, Android .so, and iOS xcframework, then bundles JS/TS |
+| `npm run build:wasm` | Compiles Rust to WASM via wasm-pack; outputs to `build/wasm/` |
+| `npm run build:android` | Compiles Rust to Android shared libraries via cargo-ndk |
+| `npm run build:ios` | Builds iOS xcframework via xcodebuild + lipo |
+| `npm run build:lib` | Runs tsdown to produce the JS/TS bundle; requires WASM to be pre-built |
 
-# WASM only (compiles Rust via wasm-pack)
-npm run build:wasm
-
-# JS bundle only (runs tsdown on existing build/wasm output)
-npm run build:js
-```
-
-Build output:
-- `build/wasm/web/` — intermediate wasm-pack output
-- `dist/` — final npm package artifacts (ESM, CJS, types, WASM binary)
+Build artifacts:
+- `build/wasm/` — intermediate wasm-pack output (gitignored)
+- `dist/` — final npm package artifacts: ESM, CJS, type declarations, WASM binary
 
 ## Testing
 
+Run Rust tests (includes cross-version Bulletproof compatibility tests):
+
 ```bash
-# Run all Rust tests
 cargo test --manifest-path rust/Cargo.toml --workspace
 ```
 
-The test suite includes cross-version compatibility tests (`rust/core/tests/cross_version_compat.rs`) that verify proofs generated with bulletproofs v5.0.0 can be verified by v4.0.0.
-
-## Project Structure
-
-The Rust code is split into two crates under `rust/`:
-
-- **`rust/core`** — Pure Rust library (`aptos_confidential_asset_core`). No WASM dependencies. Contains all cryptographic logic: discrete log solving and range proof generation/verification.
-- **`rust/wasm`** — WASM bindings (`aptos_confidential_asset_wasm`). Thin wrappers around `core` using `wasm-bindgen`. Handles JS serialization and maps errors to `JsError`.
-
-Keep cryptographic logic in `core`. Only add to `wasm` what is needed for the JS interface.
-
-## Discrete Log Algorithms
-
-The discrete log algorithm is selected via a Cargo feature at compile time (only one active at a time):
-
-| Feature | Notes |
-|---------|-------|
-| `tbsgs_k` (default) | Recommended — best size/performance ratio |
-| `bsgs_k` | Faster, larger tables |
-| `bsgs` | Standard BSGS |
-| `bl12` | Smallest tables, slower |
-
-To compare WASM binary sizes across all variants:
+Run JS tests (expo-module test runner):
 
 ```bash
-./scripts/wasm-sizes.sh
+npm test
 ```
+
+Lint and format check:
+
+```bash
+npm run lint
+```
+
+Type check:
+
+```bash
+npm run typecheck
+```
+
+All four checks must pass before opening a pull request.
+
+## Coding standards
+
+- **Cryptographic logic belongs in `rust/core`.** The `aptos_confidential_asset_core` crate has no WASM dependencies and should remain independently testable in pure Rust.
+- **WASM wrappers belong in `rust/wasm`.** The `aptos_confidential_asset_wasm` crate is a thin layer that calls into `core`, handles JS serialization, and maps errors to `JsError`. Do not put algorithmic logic here.
+- **Validate inputs at boundaries.** Argument validation (lengths, bit widths, etc.) should happen in the WASM or JS layer before passing data into core functions.
+- **Follow Biome rules.** Run `npm run lint` before committing. The project uses Biome for both linting and formatting.
+
+## Branch and PR process
+
+1. Create a feature branch from `main`.
+2. Keep PRs focused — one logical change per PR.
+3. Use [Conventional Commits](https://www.conventionalcommits.org/) for PR titles and commit messages: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, etc.
+4. If your change affects the published package, add a changeset (see below).
+5. Ensure all tests, lint, and typecheck pass locally before opening a PR.
 
 ## Changesets
 
-This project uses [Changesets](https://github.com/changesets/changesets) for versioning.
+This project uses [Changesets](https://github.com/changesets/changesets) to manage versioning and changelogs.
 
-For any change that affects the published package, add a changeset:
+Add a changeset for any change that affects the published package:
 
 ```bash
 npm run changeset
 ```
 
-Follow the prompts to select the bump type and describe the change. Commit the generated `.changeset/*.md` file alongside your code changes.
+Follow the prompts to pick a bump type and describe the change. Commit the generated `.changeset/*.md` file alongside your code.
 
 **Bump type guide:**
-- `patch` — bug fixes, internal refactors with no API impact
-- `minor` — new functionality, backwards-compatible
-- `major` — breaking changes to the public API
 
-Changes that do not require a changeset: CI config, dev tooling, test-only changes, documentation.
+| Type | When to use |
+|---|---|
+| `patch` | Bug fixes, internal refactors with no API impact |
+| `minor` | New functionality, backwards-compatible |
+| `major` | Breaking changes to the public API |
 
-## Pull Requests
+Changes that do **not** need a changeset: CI configuration, dev tooling changes, test-only changes, documentation updates.
 
-- Keep PRs focused. One logical change per PR.
-- Add a changeset if the published package is affected.
-- Ensure `cargo test --workspace` passes before opening a PR.
-- PR titles should follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, etc.).
+## Discussions and issues
+
+Open a [GitHub issue](https://github.com/aptos-labs/confidential-asset-bindings/issues) for bug reports, feature requests, or questions before starting significant work.
+
+For deeper contributor documentation — architecture decisions, project structure, platform-specific build details — see [`docs/contributors/`](docs/contributors/).

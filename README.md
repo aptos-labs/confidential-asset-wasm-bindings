@@ -1,8 +1,8 @@
 # @aptos-labs/confidential-asset-bindings
 
-Bindings for Aptos confidential asset (discrete log + range proofs).
+Cross-platform cryptographic library for Aptos confidential assets — discrete log solving over Ristretto255 and Bulletproof range proofs, running on Web, Node.js, iOS, and Android.
 
-## Installation
+## Install
 
 ```bash
 npm install @aptos-labs/confidential-asset-bindings
@@ -10,111 +10,84 @@ npm install @aptos-labs/confidential-asset-bindings
 
 ## Usage
 
-No initialization required — WASM is loaded automatically on first use, from local `node_modules` in Node.js or from the versioned unpkg CDN in browsers.
+No initialization is required. WASM loads automatically on first call.
 
-### Discrete Log
+### Solve a discrete log
 
-Solves discrete logarithms on the Ristretto255 curve for 16-bit and 32-bit secrets. Used to decrypt confidential asset balances.
+Decrypt a confidential asset balance from a Ristretto255 curve point.
 
 ```typescript
 import { solveDiscreteLog } from "@aptos-labs/confidential-asset-bindings";
 
-// y is a compressed Ristretto point (32 bytes): y = g^x
-// maxNumBits must be 16 or 32
-const x: bigint = await solveDiscreteLog(y, 32);
+// y is a 32-byte compressed Ristretto255 point
+const balance: bigint = await solveDiscreteLog(y, 32);
 ```
 
-### Range Proofs
+`maxNumBits` must be `16` or `32`.
 
-Zero-knowledge range proofs using Bulletproofs. Proves a value lies in `[0, 2^numBits)` without revealing it.
+### Generate a range proof
+
+Prove that values lie in `[0, 2^numBits)` without revealing them.
 
 ```typescript
-import {
-  rangeProof,
-  batchRangeProof,
-  verifyProof,
-  batchVerifyProof,
-} from "@aptos-labs/confidential-asset-bindings";
+import { batchRangeProof } from "@aptos-labs/confidential-asset-bindings";
 
-// r is a 32-byte blinding scalar
-// valBase and randBase are 32-byte compressed Ristretto points (Pedersen bases)
-// numBits must be 8, 16, 32, or 64 (default: 32)
-const { proof, commitment } = await rangeProof({ v, r, valBase, randBase, numBits });
-
-const valid = await verifyProof({ proof, comm: commitment, valBase, randBase, numBits });
-
-// Batch variants
-const { proof: batchProof, commitments } = await batchRangeProof({ v: values, rs: blindings, valBase, randBase, numBits });
-
-const batchValid = await batchVerifyProof({ proof: batchProof, comms: commitments, valBase, randBase, numBits });
+const { proof, comms } = await batchRangeProof({
+  v: [100n, 200n],                          // values to prove (u64)
+  rs: [blindingFactor1, blindingFactor2],   // 32-byte blinding factors; length must equal v.length
+  valBase,                                  // 32-byte Pedersen value base point
+  randBase,                                 // 32-byte Pedersen randomness base point
+  numBits: 32,                              // 8, 16, 32, or 64 (default: 32)
+});
 ```
 
-## Cross-Version Compatibility
+### Verify a range proof
 
-Range proofs are generated with bulletproofs v5.0.0 but are verifiable by bulletproofs v4.0.0, which is the version used in aptos-core. This is covered by tests in `rust/core/tests/cross_version_compat.rs`.
+```typescript
+import { batchVerifyProof } from "@aptos-labs/confidential-asset-bindings";
 
-## Algorithm Selection
+const valid: boolean = await batchVerifyProof({
+  proof,
+  comms,
+  valBase,
+  randBase,
+  numBits: 32,
+});
+```
 
-The discrete log algorithm is selected at compile time via Cargo features. Only one feature can be active at a time.
+## Cross-version compatibility
+
+Range proofs are generated with Bulletproofs v5.0.0 and are verifiable by v4.0.0 as used in aptos-core. The domain separation tag `b"AptosConfidentialAsset/BulletproofRangeProof"` matches the on-chain verifier exactly, so proofs produced by this library can be submitted directly to the Aptos network.
+
+## Algorithm selection
+
+The discrete log solver algorithm is selected at compile time via Cargo features (WASM builds only). Only one feature may be active at a time.
 
 | Feature | Table Size | WASM Size | Notes |
-|---------|-----------|-----------|-------|
-| `tbsgs_k` (default) | ~512 KiB | ~774 KiB | Recommended: best size/performance ratio |
-| `bsgs_k` | ~2.0 MiB | ~2.1 MiB | Faster but larger |
+|---|---|---|---|
+| `tbsgs_k` (default) | ~512 KiB | ~774 KiB | Recommended — best size/performance ratio |
+| `bsgs_k` | ~2.0 MiB | ~2.1 MiB | Faster, larger |
 | `bsgs` | ~2.0 MiB | ~2.1 MiB | Standard BSGS |
-| `bl12` | ~258 KiB | ~268 KiB | Smallest but slower |
+| `bl12` | ~258 KiB | ~268 KiB | Smallest, slowest |
 
-To build with a different algorithm:
+To build with a non-default algorithm, pass `--no-default-features --features <name>` to the underlying `wasm-pack` invocation.
 
-```bash
-npm run build:wasm -- --no-default-features --features bl12
-```
+## Building from source
 
-To compare sizes across all variants:
+Toolchain versions are managed by [mise](https://mise.jdx.dev/). Run `mise install` in the repo root, then:
 
 ```bash
-./scripts/wasm-sizes.sh
+npm run build           # full build: Rust → WASM + Android + iOS + JS bundle
+npm run build:wasm      # WASM only
+npm run build:android   # Android .so files
+npm run build:ios       # iOS xcframework
+npm run build:lib       # JS/TS bundle (requires pre-built WASM)
 ```
 
-## Repository Structure
+## Links
 
-```
-confidential-asset-bindings/
-├── rust/
-│   ├── core/           # Pure Rust: discrete log + range proof logic
-│   └── wasm/           # wasm-bindgen bindings wrapping core
-├── scripts/
-│   └── wasm-sizes.sh   # Build all variants and compare WASM sizes
-├── build/              # Intermediate wasm-pack output (gitignored)
-├── dist/               # Final npm artifacts
-└── tsdown.config.ts    # JS bundler configuration
-```
-
-## Building
-
-Requires [mise](https://mise.jdx.dev/) (or manually: Node 22, Rust 1.84+, wasm-pack).
-
-```bash
-# Install toolchain versions
-mise install
-
-# Build WASM then bundle JS/CJS/types
-npm run build
-
-# Build only the WASM
-npm run build:wasm
-
-# Bundle JS from existing WASM build
-npm run build:js
-```
-
-## Testing
-
-```bash
-# Run all Rust tests (includes cross-version compatibility)
-cargo test --manifest-path rust/Cargo.toml --workspace
-```
-
-## License
-
-Apache-2.0
+- [API Reference](docs/api.md)
+- [Examples](docs/examples.md)
+- [Advanced usage](docs/advanced.md)
+- [Architecture](docs/architecture.md)
+- [GitHub repository](https://github.com/aptos-labs/confidential-asset-bindings)
