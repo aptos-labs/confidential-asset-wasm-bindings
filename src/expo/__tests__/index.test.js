@@ -11,7 +11,7 @@ const path = require('node:path');
 const ts = require('typescript');
 
 function loadIndexNativeModule() {
-  const sourcePath = path.join(__dirname, '..', 'index.native.ts');
+  const sourcePath = path.join(__dirname, '..', 'index.ts');
   const source = fs.readFileSync(sourcePath, 'utf8');
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: {

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@aptos-labs/confidential-asset-bindings": ["../../src/index.native"],
+      "@aptos-labs/confidential-asset-bindings": ["../../src/expo/index.ts"],
       "@aptos-labs/confidential-asset-bindings/*": ["../../src/*"]
     }
   }

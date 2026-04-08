@@ -13,7 +13,9 @@
     "jsx": "react-jsx",
     "strict": true,
     "paths": {
-      "@aptos-labs/confidential-asset-bindings": ["../../src/index.ts"],
+      "@aptos-labs/confidential-asset-bindings": [
+        "../../src/web/index.browser.ts"
+      ],
       "@aptos-labs/confidential-asset-bindings/*": ["../../src/*"]
     }
   },

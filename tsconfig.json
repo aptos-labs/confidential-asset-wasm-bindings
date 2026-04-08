@@ -4,5 +4,10 @@
     "outDir": "./build"
   },
   "include": ["./src"],
-  "exclude": ["src/index.ts", "**/__mocks__/*", "**/__tests__/*", "**/__rsc_tests__/*"]
+  "exclude": [
+    "src/web",
+    "**/__mocks__/*",
+    "**/__tests__/*",
+    "**/__rsc_tests__/*"
+  ]
 }

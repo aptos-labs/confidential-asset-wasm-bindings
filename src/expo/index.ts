@@ -4,13 +4,13 @@ export type {
   BatchRangeProofInputs,
   BatchRangeProofResult,
   BatchVerifyRangeProofInputs,
-} from './types';
+} from '../types';
 
 import type {
   BatchRangeProofInputs,
   BatchRangeProofResult,
   BatchVerifyRangeProofInputs,
-} from './types';
+} from '../types';
 
 const RANGE_PROOF_NUM_BITS = new Set([8, 16, 32, 64]);
 const DISCRETE_LOG_MAX_NUM_BITS = new Set([16, 32]);

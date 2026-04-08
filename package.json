@@ -2,26 +2,30 @@
   "name": "@aptos-labs/confidential-asset-bindings",
   "version": "1.1.0",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.mts",
+  "main": "./dist/index.node.cjs",
+  "types": "./dist/index.node.d.mts",
   "type": "module",
-  "module": "./dist/index.mjs",
-  "react-native": "./dist/index.native.js",
+  "module": "./dist/index.node.mjs",
+  "react-native": "./dist/expo/index.js",
   "exports": {
     ".": {
       "react-native": {
-        "types": "./dist/index.native.d.ts",
-        "default": "./dist/index.native.js"
+        "types": "./dist/expo/index.d.ts",
+        "default": "./dist/expo/index.js"
+      },
+      "browser": {
+        "types": "./dist/index.browser.d.mts",
+        "default": "./dist/index.browser.mjs"
       },
       "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
+        "types": "./dist/index.node.d.mts",
+        "default": "./dist/index.node.mjs"
       },
       "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
+        "types": "./dist/index.node.d.cts",
+        "default": "./dist/index.node.cjs"
       },
-      "default": "./dist/index.mjs"
+      "default": "./dist/index.node.mjs"
     }
   },
   "files": [

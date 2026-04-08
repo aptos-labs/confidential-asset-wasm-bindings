@@ -6,7 +6,9 @@
     "strict": true,
     "noEmit": true,
     "paths": {
-      "@aptos-labs/confidential-asset-bindings": ["../../src/index.ts"],
+      "@aptos-labs/confidential-asset-bindings": [
+        "../../src/web/index.node.ts"
+      ],
       "@aptos-labs/confidential-asset-bindings/*": ["../../src/*"]
     }
   },
