@@ -46,6 +46,12 @@ jobs:
       - name: Create Release PR or Publish
         uses: changesets/action@v1
         with:
+          version: |
+            changeset version
+            npm install --package-lock-only
+            npm install --prefix examples/browser --package-lock-only
+            npm install --prefix examples/expo --package-lock-only
+            npm install --prefix examples/node --package-lock-only
           publish: npm run release
           commit: "chore: version packages"
           title: "chore: version packages"
