@@ -38,7 +38,7 @@ ristretto255-dlog = { git = "https://github.com/aptos-labs/ristretto255-dlog.git
 # This uses curve25519-dalek-ng but proof format should be compatible
 bulletproofs_v4 = { package = "bulletproofs", version = "4.0.0" }
 curve25519-dalek-ng = "4"
-rand = "0.8"
+rand = "0.9"
 
 [lib]
 crate-type = ["rlib"]
