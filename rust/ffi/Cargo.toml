@@ -1,0 +1,19 @@
+[package]
+name = "aptos_confidential_asset_ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C ABI (staticlib/cdylib) for Aptos confidential asset crypto — shared by Go/Python/C++ and iOS"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+name = "aptos_confidential_asset_ffi"
+
+[features]
+default = ["tbsgs_k"]
+tbsgs_k = ["aptos_confidential_asset_core/tbsgs_k"]
+bsgs_k = ["aptos_confidential_asset_core/bsgs_k"]
+bsgs = ["aptos_confidential_asset_core/bsgs"]
+bl12 = ["aptos_confidential_asset_core/bl12"]
+
+[dependencies]
+aptos_confidential_asset_core = { path = "../core", default-features = false }
