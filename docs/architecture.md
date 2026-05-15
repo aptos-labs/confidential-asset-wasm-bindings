@@ -18,11 +18,11 @@ This document describes the internal structure of `@aptos-labs/confidential-asse
 ├──────────────────┬──────────────────────────────────────────────┤
 │  Layer 2a: WASM  │  Layer 2b: Mobile bindings                  │
 │                  │                                              │
-│  rust/wasm/      │  rust/mobile/                               │
-│  wasm-bindgen    │  src/ffi.rs  (iOS, extern "C")              │
-│  JS class        │  src/jni.rs  (Android, JNI)                 │
-│  wrappers        │  src/abi.rs  (C-compatible structs)         │
-│                  │  src/shared.rs (validation, packing)        │
+│  rust/wasm/      │  rust/ffi/                                  │
+│  wasm-bindgen    │  src/bridge.rs (shared Rust → core)         │
+│  JS class        │  src/ffi.rs    (C ABI, iOS + Go)            │
+│  wrappers        │  src/jni.rs    (Android JNI)                │
+│                  │  src/abi.rs + src/shared.rs                 │
 ├──────────────────┴──────────────────────────────────────────────┤
 │  Layer 1: Rust core                                             │
 │                                                                 │
@@ -40,7 +40,7 @@ This document describes the internal structure of `@aptos-labs/confidential-asse
 
 **Reuse.** Both WASM and mobile bindings import the same `aptos_confidential_asset_core` crate. Proof generation and discrete log logic are never duplicated. A bug fix in `range_proof.rs` propagates to all platforms in the same build.
 
-**Isolation.** WASM-specific code (wasm-bindgen attributes, panic hooks, JS class shape) is confined to `rust/wasm`. Platform-specific code (C repr structs, `extern "C"` functions, JNI name mangling) is confined to `rust/mobile`. Neither leaks into the core crate.
+**Isolation.** WASM-specific code (wasm-bindgen attributes, panic hooks, JS class shape) is confined to `rust/wasm`. Native FFI (C repr structs, `extern "C"`, JNI) lives in `rust/ffi` with shared logic in `bridge.rs`. Neither leaks into the core crate.
 
 ---
 
@@ -81,11 +81,12 @@ rust/core/
   └─ aptos_confidential_asset_core (lib)
         │
         ▼
-rust/mobile/
-  └─ aptos_confidential_asset_mobile (lib, crate-type = ["staticlib"])
+rust/ffi/
+  └─ aptos_confidential_asset_ffi (lib, crate-type = ["staticlib", "cdylib"])
+     src/bridge.rs   (core calls — shared by C and JNI)
      src/abi.rs      (repr(C) structs for all return types)
      src/shared.rs   (validation, flat-buffer pack/unpack)
-     src/ffi.rs      (#[cfg(target_os = "ios")], #[no_mangle] extern "C")
+     src/ffi.rs      (#[no_mangle] extern "C")
         │
         ▼  cargo build --target aarch64-apple-ios --release
            cargo build --target aarch64-apple-ios-sim --release
@@ -110,17 +111,18 @@ rust/core/
   └─ aptos_confidential_asset_core (lib)
         │
         ▼
-rust/mobile/
-  └─ aptos_confidential_asset_mobile (lib, crate-type = ["cdylib"])
+rust/ffi/
+  └─ aptos_confidential_asset_ffi (lib, crate-type = ["cdylib"])
+     src/bridge.rs   (core calls — shared by C and JNI)
      src/shared.rs   (validation, flat-buffer pack/unpack)
      src/jni.rs      (#[cfg(target_os = "android")], JNI entry points)
         │
         ▼  cargo-ndk -t arm64-v8a -t armeabi-v7a -t x86_64 build --release
 build/android/
   jniLibs/
-    arm64-v8a/     libconfidential_asset_bindings.so
-    armeabi-v7a/   libconfidential_asset_bindings.so
-    x86_64/        libconfidential_asset_bindings.so
+    arm64-v8a/     libaptos_confidential_asset_ffi.so
+    armeabi-v7a/   libaptos_confidential_asset_ffi.so
+    x86_64/        libaptos_confidential_asset_ffi.so
         │
         ▼  Expo module (android/ directory)
            Kotlin class ConfidentialAssetBindingsModule (TurboModule)
@@ -155,7 +157,7 @@ This convention must be followed by any caller that bypasses the TypeScript API 
 
 ## Error sanitization design
 
-Internal Rust errors can contain information that should not reach production callers: memory addresses, internal type names, unexpected input values, or hints about the system state. The `sanitize_external_error()` helper in `rust/mobile/src/shared.rs` addresses this.
+Internal Rust errors can contain information that should not reach production callers: memory addresses, internal type names, unexpected input values, or hints about the system state. The `sanitize_external_error()` helper in `rust/ffi/src/shared.rs` addresses this.
 
 ```
 debug build  (debug_assertions = true)
@@ -218,7 +220,7 @@ The `DiscreteLogSolver` algorithm is selected at compile time via Cargo features
 | `bsgs`       | Classic BSGS       | < 512 KiB   | Smaller memory, slower 32-bit solves. |
 | `bl12`       | 12-bit baby step   | Minimal     | Smallest WASM bundle, 12-bit values only. |
 
-Only one algorithm feature should be active per build. The default feature set enables `tbsgs_k`. To override, pass `--no-default-features --features <feature>` to both the `rust/wasm` and `rust/mobile` builds.
+Only one algorithm feature should be active per build. The default feature set enables `tbsgs_k`. To override, pass `--no-default-features --features <feature>` to both the `rust/wasm` and `rust/ffi` builds.
 
 ---
 

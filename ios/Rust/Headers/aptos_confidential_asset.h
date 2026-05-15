@@ -1,7 +1,18 @@
-#pragma once
+/**
+ * C ABI for Aptos confidential asset (range proofs + discrete log).
+ * Canonical header for Go, C++, and other FFI consumers.
+ * Keep in sync with rust/ffi/src/abi.rs and rust/ffi/src/ffi.rs.
+ */
+#ifndef APTOS_CONFIDENTIAL_ASSET_H
+#define APTOS_CONFIDENTIAL_ASSET_H
+
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
   uint8_t *ptr;
@@ -34,21 +45,24 @@ ConfidentialAssetBatchRangeProofResult confidential_asset_batch_range_proof(
     const uint8_t *blindings_flat_ptr, size_t blindings_flat_len,
     const uint8_t *val_base_ptr, size_t val_base_len,
     const uint8_t *rand_base_ptr, size_t rand_base_len,
-    size_t num_bits
-);
+    size_t num_bits);
 
 ConfidentialAssetBoolResult confidential_asset_batch_verify_proof(
     const uint8_t *proof_ptr, size_t proof_len,
     const uint8_t *comms_flat_ptr, size_t comms_flat_len,
     const uint8_t *val_base_ptr, size_t val_base_len,
     const uint8_t *rand_base_ptr, size_t rand_base_len,
-    size_t num_bits
-);
+    size_t num_bits);
 
 void *confidential_asset_create_solver(void);
 void confidential_asset_free_solver(void *ptr);
 ConfidentialAssetBytesResult confidential_asset_solver_solve(
     void *ptr,
     const uint8_t *y_ptr, size_t y_len,
-    uint8_t max_num_bits
-);
+    uint8_t max_num_bits);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* APTOS_CONFIDENTIAL_ASSET_H */

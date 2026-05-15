@@ -20,13 +20,14 @@ confidential-asset-bindings/
 │   │       ├── lib.rs           # WASM init + panic hook
 │   │       ├── discrete_log.rs  # wasm-bindgen wrapper for DiscreteLogSolver
 │   │       └── range_proof.rs   # wasm-bindgen wrappers for batch_range_proof/batch_verify_proof
-│   └── mobile/                  # iOS and Android platform wrapper
-│       ├── Cargo.toml           # crate: aptos_confidential_asset_mobile
+│   └── ffi/                     # C ABI + iOS/Android native (also used by Go)
+│       ├── Cargo.toml           # crate: aptos_confidential_asset_ffi
+│       ├── include/             # cbindgen header (aptos_confidential_asset.h)
 │       └── src/
-│           ├── lib.rs           # Platform cfg gates (routes to iOS or Android code)
-│           ├── shared.rs        # Validation helpers and flat-buffer utilities (shared by both platforms)
-│           ├── abi.rs           # iOS only: C-compatible result structs (#[repr(C)])
-│           ├── ffi.rs           # iOS only: extern "C" #[no_mangle] entry points
+│           ├── bridge.rs        # Shared Rust logic (C + JNI call into core)
+│           ├── shared.rs        # Validation helpers and flat-buffer utilities
+│           ├── abi.rs           # C-compatible result structs (#[repr(C)])
+│           ├── ffi.rs           # extern "C" #[no_mangle] entry points
 │           └── jni.rs           # Android only: JNI entry points
 │
 ├── src/                         # TypeScript library source
@@ -42,7 +43,7 @@ confidential-asset-bindings/
 │
 ├── ios/
 │   └── Rust/
-│       ├── Headers/             # C headers generated from abi.rs / ffi.rs
+│       ├── Headers/             # (optional) legacy; build uses rust/ffi/include
 │       └── Binaries/
 │           └── ConfidentialAsset.xcframework/  # Universal XCFramework (device + simulator slices)
 │
@@ -98,15 +99,16 @@ A thin wasm-bindgen wrapper around `core`. It:
 
 Built by `scripts/build-wasm.sh` using `wasm-pack`.
 
-### `aptos_confidential_asset_mobile` (`rust/mobile`)
+### `aptos_confidential_asset_ffi` (`rust/ffi`)
 
-Platform wrappers for iOS and Android. Responsibilities:
+Canonical native bindings for **Go**, **iOS** (C FFI / XCFramework), and **Android** (JNI). Responsibilities:
 
-- `shared.rs` — input validation and flat-buffer utilities used by both platforms.
-- `abi.rs` + `ffi.rs` (iOS) — `#[repr(C)]` result types and `extern "C" #[no_mangle]` functions that are called through the C FFI layer exposed via the XCFramework headers.
-- `jni.rs` (Android) — JNI entry points called by the Expo native module on Android.
+- `bridge.rs` — pure Rust calls into `core` (single algorithm path for C and JNI).
+- `shared.rs` — input validation and flat-buffer utilities.
+- `abi.rs` + `ffi.rs` — `#[repr(C)]` result types and `extern "C" #[no_mangle]` functions (Go + iOS).
+- `jni.rs` (Android only) — JNI entry points for the Expo native module.
 
-The iOS and Android code is guarded by `cfg` attributes in `lib.rs` so only the relevant platform code is compiled for each target.
+Header: `rust/ffi/include/aptos_confidential_asset.h` (cbindgen). iOS builds embed this via `scripts/build-ios.sh`; Android loads `libaptos_confidential_asset_ffi.so`.
 
 ## TypeScript source (`src/`)
 

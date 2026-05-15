@@ -37,13 +37,6 @@ name = "aptos_confidential_asset_ffi"
 version = "0.1.0"
 dependencies = [
  "aptos_confidential_asset_core",
-]
-
-[[package]]
-name = "aptos_confidential_asset_mobile"
-version = "0.1.0"
-dependencies = [
- "aptos_confidential_asset_core",
  "jni",
 ]
 

@@ -6,14 +6,16 @@ Experimental **Go** bindings over the same cryptographic core as the npm package
 
 - **npm / JS** remains the primary semver surface (`package.json`).
 - **Go module**: `github.com/aptos-labs/confidential-asset-bindings/bindings/go` (use your fork path with `replace` when needed).
-- **Native FFI static libraries** ship on **GitHub Releases** (not npm). Align git tag `vX.Y.Z` with npm `@aptos-labs/confidential-asset-bindings@X.Y.Z` when publishing both.
+- **Native FFI static libraries** ship on **GitHub Releases** (not npm). After each successful **npm** publish, [`release.yml`](../.github/workflows/release.yml) pushes git tag **`vX.Y.Z`**, which runs **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** and publishes the staticlibs + `SHA256SUMS` for the same semver as `package.json` (no separate manual tagging in the default flow).
 
 ## Rust layout
+
+Native bindings (Go, iOS, Android) share a single crate — no separate `mobile` crate.
 
 | Crate | Role |
 |-------|------|
 | [`aptos_confidential_asset_core`](../rust/core) | Pure crypto (Bulletproofs + discrete log) |
-| [`aptos_confidential_asset_ffi`](../rust/ffi) | C ABI (`staticlib` / `cdylib`) — **canonical for Go** |
+| [`aptos_confidential_asset_ffi`](../rust/ffi) | C ABI + Android JNI (`staticlib` / `cdylib`) — **canonical for Go, iOS, Android** |
 
 C header: [`rust/ffi/include/aptos_confidential_asset.h`](../rust/ffi/include/aptos_confidential_asset.h).
 
@@ -55,17 +57,15 @@ Install a prebuilt static library from GitHub Releases (must match a published t
 
 ## CI
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs **Bindings (FFI + Go)** on Ubuntu (`go-bindings-smoke`): build FFI, `go test` in `bindings/go`, smoke test in `examples/go`. Together with lint / JS / Rust tests / macOS full build this gates merges to `main`.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs **Bindings (FFI + Go)** on Ubuntu (`go-bindings-smoke`): build FFI, `go test` in `bindings/go`, smoke test in `examples/go`. **Android JNI (FFI arm64-v8a)** cross-compiles the same crate with `cargo-ndk` + NDK so JNI code is exercised on every Linux PR. Together with lint / JS / Rust tests / macOS full build this gates merges to `main`.
 
-Repository admins should mark **Bindings (FFI + Go)** as a **required** check under branch protection for `main`.
+Repository admins should mark **Bindings (FFI + Go)** and **Android JNI (FFI arm64-v8a)** as **required** checks under branch protection for `main`.
 
 ## Releases (FFI binaries)
 
-Do **not** confuse this with **`Release npm (Changesets)`** (push to `main`): that workflow only versions/publishes the **JavaScript/npm** package. **Go** consumers use **`libaptos_confidential_asset_ffi`** from **GitHub Release** assets, produced by **`Release native FFI binaries`** (`bindings-release.yml`).
+**One release path:** merging **Version Packages** triggers `npm run release` on `main`; when publish succeeds, **`release.yml`** pushes **`vX.Y.Z`**, which runs **Release native FFI binaries** and creates the GitHub Release with prebuilt `libaptos_confidential_asset_ffi` archives and **`SHA256SUMS`**. Changelog for npm remains in `CHANGELOG.md`; the GitHub Release is the native-FFI asset bundle.
 
-1. Use the **same semver `X.Y.Z`** as npm when shipping both.
-2. Push git tag **`vX.Y.Z`** on the release commit (pattern `v*.*.*`) to run the FFI workflow automatically.
-3. Download **`SHA256SUMS`** and verify archives locally (see [releasing.md](contributors/releasing.md#native-ffi-github-release-after-npm)).
+Use **Actions → Release native FFI binaries** (`workflow_dispatch`) only as a fallback (e.g. draft rebuild) — see [releasing.md](contributors/releasing.md).
 
 ### Prebuilt triples (GitHub Release matrix)
 
@@ -76,6 +76,7 @@ Published by [`bindings-release.yml`](../.github/workflows/bindings-release.yml)
 | `x86_64-unknown-linux-gnu` | glibc Linux amd64 |
 | `aarch64-unknown-linux-gnu` | glibc Linux arm64 |
 | `x86_64-unknown-linux-musl` | musl Linux amd64 |
+| `aarch64-unknown-linux-musl` | musl Linux arm64 |
 | `aarch64-apple-darwin` | Apple Silicon macOS |
 | `x86_64-pc-windows-msvc` | Windows amd64 |
 

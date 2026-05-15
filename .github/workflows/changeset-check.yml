@@ -23,8 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Root package is the whole repo for changesets, but npm only ships src/ + mobile
-      # artifacts. Go FFI (bindings/go, rust/ffi) and docs/CI must not require a changeset.
+      # Root package is the whole repo for changesets. Require a changeset when the npm publish
+      # surface changes: app code, mobile glue, crypto core/WASM, or native FFI (Go + iOS + Android).
+      # Go-only paths (bindings/go, examples/go) and docs/CI-only edits stay out of the `npm` filter.
       - uses: dorny/paths-filter@v3
         id: npm_release
         with:
@@ -38,7 +39,7 @@ jobs:
               - expo-module.config.json
               - rust/core/**
               - rust/wasm/**
-              - rust/mobile/**
+              - rust/ffi/**
               - scripts/build-wasm.sh
               - scripts/build-android.sh
               - scripts/build-ios.sh

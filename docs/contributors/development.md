@@ -84,7 +84,7 @@ Lint and typecheck run together in the `lint-and-typecheck` CI job on every push
 cargo test --manifest-path rust/Cargo.toml --workspace
 ```
 
-Runs all unit and integration tests across all three crates (`core`, `wasm`, `mobile`).
+Runs all unit and integration tests across all crates (`core`, `wasm`, `ffi`).
 
 ### JavaScript
 

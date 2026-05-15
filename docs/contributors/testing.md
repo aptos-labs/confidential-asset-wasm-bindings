@@ -11,7 +11,7 @@ Tests are spread across the three crates:
 | `rust/core/src/discrete_log.rs` | DiscreteLogSolver unit tests |
 | `rust/core/src/range_proof.rs` | Proof generation and verification round-trip tests |
 | `rust/core/tests/cross_version_compat.rs` | Bulletproofs cross-version compatibility (see below) |
-| `rust/mobile/src/shared.rs` | Input validation and flat-buffer utilities |
+| `rust/ffi/src/shared.rs` | Input validation and flat-buffer utilities |
 
 ### How to run them
 
@@ -25,7 +25,7 @@ To run only one crate's tests:
 
 ```bash
 cargo test --manifest-path rust/core/Cargo.toml
-cargo test --manifest-path rust/mobile/Cargo.toml
+cargo test --manifest-path rust/Cargo.toml -p aptos_confidential_asset_ffi
 ```
 
 To run a specific test by name:
@@ -49,9 +49,9 @@ Why they matter: the on-chain verifier cannot be updated without a network upgra
 
 **These tests must pass before any release.** Changes to `rust/core/src/range_proof.rs` that affect the DST, generator parameters, or serialisation format require a coordinated upgrade with the Aptos network team.
 
-## Mobile shared module tests
+## FFI shared module tests
 
-**File:** `rust/mobile/src/shared.rs`
+**File:** `rust/ffi/src/shared.rs`
 
 `shared.rs` contains unit tests for:
 
@@ -90,9 +90,11 @@ The `.github/workflows/ci.yml` workflow runs on every push and pull request to `
 | `lint-and-typecheck` | `npm run lint` + `npm run typecheck` (Node only, no Rust needed) |
 | `test-rust` | `cargo test --workspace` with Swatinem/rust-cache |
 | `test-js` | `npm test` via expo-module-scripts |
+| `go-bindings-smoke` | Release FFI staticlib + Go `aptosconfidential` tests + `examples/go` |
+| `android-ffi-compile` | NDK + `cargo-ndk` arm64-v8a release build of `aptos_confidential_asset_ffi` (JNI) |
 | `build` | Full `npm run build` with Rust cache |
 
-All four jobs must pass for a PR to be mergeable.
+All jobs must pass for a PR to be mergeable (enable required checks in branch protection as needed).
 
 ## Adding a new test
 

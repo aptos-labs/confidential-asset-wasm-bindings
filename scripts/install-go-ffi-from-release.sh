@@ -68,7 +68,7 @@ esac
 
 # Must match artifacts from .github/workflows/bindings-release.yml matrix.
 case "${target_triple}" in
-  x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu|x86_64-unknown-linux-musl|aarch64-apple-darwin|x86_64-pc-windows-msvc) ;;
+  x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu|x86_64-unknown-linux-musl|aarch64-unknown-linux-musl|aarch64-apple-darwin|x86_64-pc-windows-msvc) ;;
   *)
     echo "error: ${target_triple} is not published on GitHub Releases." >&2
     echo "Build locally: cargo build -p aptos_confidential_asset_ffi --release --target ${target_triple} --manifest-path rust/Cargo.toml" >&2

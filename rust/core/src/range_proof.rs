@@ -45,7 +45,7 @@ impl BatchRangeProof {
 /// * `rand_base` - Randomness base point for Pedersen commitment (32-byte compressed point)
 /// * `num_bits` - Bit length for range proof (8, 16, 32, or 64)
 pub fn batch_range_proof(
-    v: Vec<u64>,
+    v: &[u64],
     rs: Vec<Vec<u8>>,
     val_base: Vec<u8>,
     rand_base: Vec<u8>,

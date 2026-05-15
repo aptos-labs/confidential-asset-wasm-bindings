@@ -1,16 +1,6 @@
-use aptos_confidential_asset_core::discrete_log::DiscreteLogSolver;
-use std::ffi::c_void;
-
 pub const RANGE_PROOF_BATCH_ELEMENT_BYTES: usize = 32;
 pub const DISCRETE_LOG_MAX_NUM_BITS_16: usize = 16;
 pub const DISCRETE_LOG_MAX_NUM_BITS_32: usize = 32;
-
-pub fn solver_from_ptr<'a>(ptr: *mut c_void) -> Result<&'a DiscreteLogSolver, String> {
-    if ptr.is_null() {
-        return Err("received null solver pointer".to_string());
-    }
-    Ok(unsafe { &*(ptr as *const DiscreteLogSolver) })
-}
 
 pub fn bytes_from_ptr<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], String> {
     if len == 0 {

@@ -67,7 +67,7 @@ cd bindings/go && go test ./aptosconfidential/...
 ./scripts/check-binding-parity.sh
 ```
 
-CI also runs **Bindings (FFI + Go)** on Ubuntu (`go-bindings-smoke` in `.github/workflows/ci.yml`). Repository admins should enable this job as a **required** check under branch protection for `main`; see [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
+CI also runs **Bindings (FFI + Go)** on Ubuntu (`go-bindings-smoke` in `.github/workflows/ci.yml`) and **Android JNI (FFI arm64-v8a)** (`android-ffi-compile`). Repository admins should enable both as **required** checks under branch protection for `main`; see [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
 
 ## Working from a fork
 
@@ -75,7 +75,7 @@ GitHub Actions run in the repository where they execute. On a fork, configure **
 
 If Changesets cannot open PRs, add secret **`CHANGESETS_GITHUB_TOKEN`** (PAT with `repo`, or fine-grained Contents + Pull requests write). The Release workflow uses `secrets.CHANGESETS_GITHUB_TOKEN || github.token`.
 
-To **release native FFI artifacts** for Go, push git tag **`vX.Y.Z`** (`v*.*.*`) after npm release — **Release native FFI binaries** runs automatically. This is separate from **Release npm (Changesets)**. See [`docs/bindings.md`](docs/bindings.md).
+To **ship native FFI artifacts for Go** after an npm release: no manual tag is required — **`release.yml`** pushes **`vX.Y.Z`** after a successful publish, which runs **Release native FFI binaries** (`bindings-release.yml`). See [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
 
 ## Coding standards
 
@@ -112,7 +112,7 @@ Follow the prompts to pick a bump type and describe the change. Commit the gener
 | `minor` | New functionality, backwards-compatible |
 | `major` | Breaking changes to the public API |
 
-Changes that do **not** need a changeset: CI configuration, dev tooling changes, test-only changes, documentation updates, and **Go-only native bindings** (`bindings/go/`, `rust/ffi/`, `examples/go/`). CI only runs **Require Changeset** when files under the npm publish surface change (`src/`, `ios/`, `android/`, `rust/core|wasm|mobile/`, etc.); see [`changeset-check.yml`](.github/workflows/changeset-check.yml).
+Changes that do **not** need a changeset: CI configuration, dev tooling changes, test-only changes, documentation updates, and **Go-only** edits under `bindings/go/` or `examples/go/` (no `rust/ffi/`). CI runs **Require Changeset** when the npm publish surface changes (`src/`, `ios/`, `android/`, `rust/core/`, `rust/wasm/`, **`rust/ffi/`**, etc.); see [`changeset-check.yml`](.github/workflows/changeset-check.yml).
 
 ## Discussions and issues
 

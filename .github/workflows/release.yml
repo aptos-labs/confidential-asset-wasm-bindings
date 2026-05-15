@@ -44,11 +44,38 @@ jobs:
         run: npm ci
 
       - name: Create Release PR or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: npm run version
           publish: npm run release
           commit: "chore: version packages"
           title: "chore: version packages"
+          # Native FFI workflow creates the GitHub Release for `v*` (staticlibs + SHA256SUMS).
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ steps.aptos-labs-bot-auth.outputs.token }}
+
+      # Single release flow: after npm publish, push semver tag so "Release native FFI binaries"
+      # (bindings-release.yml) builds and uploads prebuilt static libraries for the same version.
+      - name: Push semver tag for native FFI release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF_NAME}"
+          git fetch origin "${BRANCH}"
+          git pull --ff-only origin "${BRANCH}"
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists locally; skipping."
+            exit 0
+          fi
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -qF "refs/tags/${TAG}"; then
+            echo "Tag ${TAG} already exists on origin; skipping."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "chore(release): ${TAG} (npm + native FFI)"
+          git push origin "refs/tags/${TAG}"
