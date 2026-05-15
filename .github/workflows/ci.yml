@@ -128,14 +128,16 @@ jobs:
         run: cargo install cargo-ndk --locked
 
       - name: Cross-compile FFI for Android (release)
+        working-directory: rust
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
         run: |
           mkdir -p /tmp/aptos-ndk-staging
           cargo ndk \
             -t arm64-v8a \
             -o /tmp/aptos-ndk-staging \
-            build -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo.toml
+            build -p aptos_confidential_asset_ffi --release
 
   go-bindings-smoke:
     name: Bindings (FFI + Go)
