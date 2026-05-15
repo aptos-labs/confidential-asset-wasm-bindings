@@ -43,7 +43,10 @@ This creates a Markdown file under `.changeset/`. Commit it alongside your code 
 - Tooling config changes (`biome.json`, `tsconfig.json`, `.mise.toml`, etc.)
 - Documentation changes (`docs/`, `README.md`, `CONTRIBUTING.md`)
 - Test-only changes (no production code modified)
+- **Go / C FFI only** — `bindings/go/`, `rust/ffi/`, `examples/go/`, FFI release scripts, and **Release native FFI binaries** (`bindings-release.yml`). Native staticlibs ship via git tag + GitHub Release, not npm. CI **Changeset Check** skips these paths (see `changeset-check.yml` `paths-filter`).
 - Internal refactors with no observable behaviour change — though add a changeset if you are unsure
+
+`changeset add --empty` does **not** satisfy `changeset status` when Changesets still considers the root package changed; use the path filter above instead of empty changesets for Go-only PRs.
 
 ## Release workflow
 

@@ -112,7 +112,7 @@ Follow the prompts to pick a bump type and describe the change. Commit the gener
 | `minor` | New functionality, backwards-compatible |
 | `major` | Breaking changes to the public API |
 
-Changes that do **not** need a changeset: CI configuration, dev tooling changes, test-only changes, documentation updates.
+Changes that do **not** need a changeset: CI configuration, dev tooling changes, test-only changes, documentation updates, and **Go-only native bindings** (`bindings/go/`, `rust/ffi/`, `examples/go/`). CI only runs **Require Changeset** when files under the npm publish surface change (`src/`, `ios/`, `android/`, `rust/core|wasm|mobile/`, etc.); see [`changeset-check.yml`](.github/workflows/changeset-check.yml).
 
 ## Discussions and issues
 
