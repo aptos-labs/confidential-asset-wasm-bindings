@@ -58,6 +58,25 @@ npm run typecheck
 
 All four checks must pass before opening a pull request.
 
+For **Go bindings** changes, also run:
+
+```bash
+./scripts/build-ffi-for-bindings.sh
+export CGO_ENABLED=1
+cd bindings/go && go test ./aptosconfidential/...
+./scripts/check-binding-parity.sh
+```
+
+CI also runs **Bindings (FFI + Go)** on Ubuntu (`go-bindings-smoke` in `.github/workflows/ci.yml`). Repository admins should enable this job as a **required** check under branch protection for `main`; see [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
+
+## Working from a fork
+
+GitHub Actions run in the repository where they execute. On a fork, configure **Settings → Actions → General**: **Read and write permissions** and **Allow GitHub Actions to create and approve pull requests** if you use Changesets.
+
+If Changesets cannot open PRs, add secret **`CHANGESETS_GITHUB_TOKEN`** (PAT with `repo`, or fine-grained Contents + Pull requests write). The Release workflow uses `secrets.CHANGESETS_GITHUB_TOKEN || github.token`.
+
+To **release native FFI artifacts** for Go, push git tag **`vX.Y.Z`** (`v*.*.*`) after npm release — **Release native FFI binaries** runs automatically. This is separate from **Release npm (Changesets)**. See [`docs/bindings.md`](docs/bindings.md).
+
 ## Coding standards
 
 - **Cryptographic logic belongs in `rust/core`.** The `aptos_confidential_asset_core` crate has no WASM dependencies and should remain independently testable in pure Rust.

@@ -22,7 +22,7 @@ From repository root:
 ./scripts/install-go-ffi-from-release.sh
 ```
 
-This detects local `GOOS` / `GOARCH` (and Linux `gnu`/`musl`), downloads the matching asset from the latest GitHub Release, verifies `SHA256SUMS`, and installs it into `rust/target/...` paths expected by `cgo_*.go`.
+This detects local `GOOS` / `GOARCH` (and Linux `gnu`/`musl`), downloads the matching asset from the latest GitHub Release, verifies `SHA256SUMS`, and installs it into `rust/target/...` paths expected by `cgo_*.go`. Only triples published by **Release native FFI binaries** are supported (see [docs/bindings.md](../../docs/bindings.md#prebuilt-triples-github-release-matrix)); Intel Mac and Windows arm64 require a local `cargo build`.
 
 To pin an explicit release tag:
 

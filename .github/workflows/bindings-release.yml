@@ -51,7 +51,7 @@ jobs:
             os: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out (notes / attribution)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve release tag and version
         id: rel
@@ -170,7 +170,7 @@ jobs:
 
             Includes `SHA256SUMS` for all attached archives. Header: `aptos_confidential_asset.h` inside each archive.
 
-            See [docs/bindings.md](https://github.com/${{ github.repository }}/blob/main/docs/bindings.md) for consumption (Go / C++ / Zig).
+            See [docs/bindings.md](https://github.com/${{ github.repository }}/blob/main/docs/bindings.md) for consumption (Go / C++).
           files: |
             release-files/*.tar.gz
             release-files/*.zip

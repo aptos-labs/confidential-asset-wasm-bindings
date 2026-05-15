@@ -39,3 +39,4 @@ func main() {
 	}
 	fmt.Println("aptosconfidential OK (BatchRangeProof → BatchVerifyProof)")
 }
+

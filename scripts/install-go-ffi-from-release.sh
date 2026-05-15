@@ -40,24 +40,39 @@ case "${GOOS_VAL}/${GOARCH_VAL}" in
     esac
     lib_name="libaptos_confidential_asset_ffi.a"
     ;;
-  darwin/amd64)
-    target_triple="x86_64-apple-darwin"
-    lib_name="libaptos_confidential_asset_ffi.a"
-    ;;
   darwin/arm64)
     target_triple="aarch64-apple-darwin"
     lib_name="libaptos_confidential_asset_ffi.a"
+    ;;
+  darwin/amd64)
+    echo "error: Intel macOS (darwin/amd64) is not published on GitHub Releases." >&2
+    echo "Build locally: cargo build -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo.toml" >&2
+    echo "See docs/bindings.md for supported prebuilt triples." >&2
+    exit 1
     ;;
   windows/amd64)
     target_triple="x86_64-pc-windows-msvc"
     lib_name="aptos_confidential_asset_ffi.lib"
     ;;
   windows/arm64)
-    target_triple="aarch64-pc-windows-msvc"
-    lib_name="aptos_confidential_asset_ffi.lib"
+    echo "error: Windows arm64 is not published on GitHub Releases." >&2
+    echo "Build locally with --target aarch64-pc-windows-msvc or use windows/amd64 assets on amd64." >&2
+    echo "See docs/bindings.md for supported prebuilt triples." >&2
+    exit 1
     ;;
   *)
     echo "unsupported GOOS/GOARCH: ${GOOS_VAL}/${GOARCH_VAL}" >&2
+    exit 1
+    ;;
+esac
+
+# Must match artifacts from .github/workflows/bindings-release.yml matrix.
+case "${target_triple}" in
+  x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu|x86_64-unknown-linux-musl|aarch64-apple-darwin|x86_64-pc-windows-msvc) ;;
+  *)
+    echo "error: ${target_triple} is not published on GitHub Releases." >&2
+    echo "Build locally: cargo build -p aptos_confidential_asset_ffi --release --target ${target_triple} --manifest-path rust/Cargo.toml" >&2
+    echo "See docs/bindings.md for supported prebuilt triples." >&2
     exit 1
     ;;
 esac

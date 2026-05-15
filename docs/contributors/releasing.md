@@ -87,8 +87,37 @@ After the "Version Packages" PR is merged and the publish step completes:
 
 Before merging a "Version Packages" PR, confirm the following:
 
-- [ ] All CI jobs pass on `main` (lint, typecheck, test-rust, test-js, build).
+- [ ] All CI jobs pass on `main` (lint, typecheck, test-rust, test-js, build, bindings FFI + Go when applicable).
 - [ ] Cross-version compatibility tests pass (`rust/core/tests/cross_version_compat.rs`). This is mandatory if any change touched `rust/core/src/range_proof.rs`.
 - [ ] The examples (browser, node, expo) work against the current build.
 - [ ] `CHANGELOG.md` in the "Version Packages" PR accurately describes the release.
 - [ ] If this is a major release, the Aptos network team has been notified of any proof format or DST changes that affect the on-chain verifier.
+- [ ] **Bindings (FFI + Go)** CI job passed if Go bindings or FFI changed.
+
+## Native FFI GitHub Release (after npm)
+
+Go consumers download **prebuilt `libaptos_confidential_asset_ffi`** from GitHub Releases (not npm).
+
+1. After npm publish succeeds, note the released version `X.Y.Z`.
+2. **Tag the same commit** (or the commit you intend to ship) and push:
+
+   ```bash
+   git tag -a "vX.Y.Z" -m "FFI release vX.Y.Z"
+   git push origin "refs/tags/vX.Y.Z"
+   ```
+
+   Pushing tag **`vX.Y.Z`** (pattern `v*.*.*`) runs **Release native FFI binaries** and uploads archives + `SHA256SUMS` to a GitHub Release for that tag.
+
+3. **Alternatively**, run **Actions → Release native FFI binaries** manually with `version: X.Y.Z` (no leading `v`) and **`draft: true`** if you want a draft without creating a tag first.
+
+See [Native bindings](../bindings.md) for supported triples and checksum verification.
+
+## Rollback guidance
+
+- **npm**: Prefer a forward-fix **patch** release via Changesets. Avoid unpublishing except emergencies.
+- **GitHub FFI Release**: Edit or delete the draft/pre-release; publish a corrected workflow run with a higher patch if binaries were wrong.
+- **Git tags**: Do not rewrite public tags consumers may have fetched; release a new patch tag + npm version instead.
+
+## Development note: `CARGO_TARGET_DIR`
+
+Some environments set a global `CARGO_TARGET_DIR`, which hides build outputs under `rust/target/` (breaking Go cgo paths). From the repo root use [`scripts/build-ffi-for-bindings.sh`](../scripts/build-ffi-for-bindings.sh) or `unset CARGO_TARGET_DIR` before `cargo build`, as documented in [`docs/bindings.md`](../bindings.md).
