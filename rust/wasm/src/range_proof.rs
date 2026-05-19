@@ -46,7 +46,7 @@ pub fn batch_range_proof(
     num_bits: usize,
 ) -> Result<BatchRangeProof, JsError> {
     let rs: Vec<Vec<u8>> = rs.iter().map(|arr| arr.to_vec()).collect();
-    core_rp::batch_range_proof(v, rs, val_base, rand_base, num_bits)
+    core_rp::batch_range_proof(&v, rs, val_base, rand_base, num_bits)
         .map(|inner| BatchRangeProof { inner })
         .map_err(|e| JsError::new(&e))
 }

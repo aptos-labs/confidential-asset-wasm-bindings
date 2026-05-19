@@ -1,36 +1,8 @@
-use aptos_confidential_asset_core::discrete_log::DiscreteLogSolver;
-use std::ffi::c_void;
+pub const RANGE_PROOF_BATCH_ELEMENT_BYTES: usize = 32;
+pub const DISCRETE_LOG_MAX_NUM_BITS_16: usize = 16;
+pub const DISCRETE_LOG_MAX_NUM_BITS_32: usize = 32;
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) const RANGE_PROOF_BATCH_ELEMENT_BYTES: usize = 32;
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) const DISCRETE_LOG_MAX_NUM_BITS_16: usize = 16;
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) const DISCRETE_LOG_MAX_NUM_BITS_32: usize = 32;
-
-#[cfg_attr(not(target_os = "ios"), allow(dead_code))]
-pub(crate) fn solver_from_ptr<'a>(ptr: *mut c_void) -> Result<&'a DiscreteLogSolver, String> {
-    if ptr.is_null() {
-        return Err("received null solver pointer".to_string());
-    }
-    Ok(unsafe { &*(ptr as *const DiscreteLogSolver) })
-}
-
-#[cfg_attr(not(target_os = "ios"), allow(dead_code))]
-pub(crate) fn bytes_from_ptr<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], String> {
-    if len == 0 {
-        return Ok(&[]);
-    }
-
-    if ptr.is_null() {
-        return Err("received null pointer with non-zero length".to_string());
-    }
-
-    Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
-}
-
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) fn validate_range_num_bits(num_bits: usize) -> Result<(), String> {
+pub fn validate_range_num_bits(num_bits: usize) -> Result<(), String> {
     match num_bits {
         8 | 16 | 32 | 64 => Ok(()),
         _ => Err(format!(
@@ -40,8 +12,7 @@ pub(crate) fn validate_range_num_bits(num_bits: usize) -> Result<(), String> {
     }
 }
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) fn validate_discrete_log_max_num_bits(max_num_bits: usize) -> Result<u8, String> {
+pub fn validate_discrete_log_max_num_bits(max_num_bits: usize) -> Result<u8, String> {
     match max_num_bits {
         DISCRETE_LOG_MAX_NUM_BITS_16 => Ok(DISCRETE_LOG_MAX_NUM_BITS_16 as u8),
         DISCRETE_LOG_MAX_NUM_BITS_32 => Ok(DISCRETE_LOG_MAX_NUM_BITS_32 as u8),
@@ -52,8 +23,7 @@ pub(crate) fn validate_discrete_log_max_num_bits(max_num_bits: usize) -> Result<
     }
 }
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) fn validate_flat_buffer_len(
+pub fn validate_flat_buffer_len(
     flat_len: usize,
     expected_count: usize,
     element_size: usize,
@@ -76,8 +46,7 @@ pub(crate) fn validate_flat_buffer_len(
     Ok(())
 }
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
-pub(crate) fn split_exact_chunks(
+pub fn split_exact_chunks(
     flat: &[u8],
     expected_count: usize,
     element_size: usize,
@@ -100,15 +69,13 @@ pub(crate) fn split_exact_chunks(
     Ok(values)
 }
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
 #[cfg(debug_assertions)]
-pub(crate) fn sanitize_external_error(message: impl Into<String>) -> String {
+pub fn sanitize_external_error(message: impl Into<String>) -> String {
     message.into()
 }
 
-#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
 #[cfg(not(debug_assertions))]
-pub(crate) fn sanitize_external_error(_message: impl Into<String>) -> String {
+pub fn sanitize_external_error(_message: impl Into<String>) -> String {
     "confidential asset operation failed".to_string()
 }
 
@@ -164,8 +131,9 @@ mod tests {
     #[test]
     fn split_exact_chunks_rejects_count_mismatch() {
         let flat = vec![0u8; 64];
-        let error = split_exact_chunks(&flat, 1, RANGE_PROOF_BATCH_ELEMENT_BYTES, "blindings_flat")
-            .expect_err("expected count mismatch");
+        let error =
+            split_exact_chunks(&flat, 1, RANGE_PROOF_BATCH_ELEMENT_BYTES, "blindings_flat")
+                .expect_err("expected count mismatch");
         assert!(error.contains("blindings_flat"));
     }
 

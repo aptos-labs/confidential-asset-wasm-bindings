@@ -43,7 +43,11 @@ This creates a Markdown file under `.changeset/`. Commit it alongside your code 
 - Tooling config changes (`biome.json`, `tsconfig.json`, `.mise.toml`, etc.)
 - Documentation changes (`docs/`, `README.md`, `CONTRIBUTING.md`)
 - Test-only changes (no production code modified)
+- **Go-only** — edits confined to `bindings/go/` or `examples/go/` (no `rust/ffi/`). Native staticlibs ship via git tag + GitHub Release, not npm. CI **Changeset Check** skips those paths (see `changeset-check.yml` `paths-filter`).
+- **Rust native FFI** (`rust/ffi/**`) — affects the npm package’s iOS/Android/Go consumers; **requires a changeset** like `rust/core` and `rust/wasm`.
 - Internal refactors with no observable behaviour change — though add a changeset if you are unsure
+
+`changeset add --empty` does **not** satisfy `changeset status` when Changesets still considers the root package changed; use the path filter above instead of empty changesets for Go-only PRs (no `rust/ffi/`).
 
 ## Release workflow
 
@@ -55,6 +59,9 @@ This creates a Markdown file under `.changeset/`. Commit it alongside your code 
    - If there are no pending changesets, nothing happens.
 5. **Review and merge the "Version Packages" PR** when you are ready to publish. CI runs again.
 6. **On merge, `changesets/action` publishes to npm** by running `npm run release`. The package appears on the npm registry under `@aptos-labs/confidential-asset-bindings`.
+7. **When publish succeeds**, `release.yml` pushes annotated git tag **`vX.Y.Z`** (from `package.json`) to `origin`. That tag triggers **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** (**Release native FFI binaries**), which builds static libraries for all matrix targets and creates the **GitHub Release** with archives and `SHA256SUMS`. No separate manual tagging step is required for the normal path.
+
+The Changesets action is configured with **`createGithubReleases: false`** so the **single** GitHub Release for a version is the native-FFI one (npm changelog remains in `CHANGELOG.md` on `main`).
 
 ## GitHub App bot
 
@@ -83,12 +90,37 @@ After the "Version Packages" PR is merged and the publish step completes:
 
    Verify that `dist/` contains the ESM bundle, CJS bundle, type declarations, and `.wasm` file.
 
+4. **Native FFI:** confirm the **Release native FFI binaries** workflow completed for tag **`vX.Y.Z`** (triggered automatically after npm publish). Open the GitHub Release for that tag and verify `SHA256SUMS` and platform archives. Optionally run `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on a dev machine.
+
 ## Pre-publishing checklist
 
 Before merging a "Version Packages" PR, confirm the following:
 
-- [ ] All CI jobs pass on `main` (lint, typecheck, test-rust, test-js, build).
+- [ ] All CI jobs pass on `main` (lint, typecheck, test-rust, test-js, build, go-bindings-smoke, android-ffi-compile when applicable).
 - [ ] Cross-version compatibility tests pass (`rust/core/tests/cross_version_compat.rs`). This is mandatory if any change touched `rust/core/src/range_proof.rs`.
 - [ ] The examples (browser, node, expo) work against the current build.
 - [ ] `CHANGELOG.md` in the "Version Packages" PR accurately describes the release.
 - [ ] If this is a major release, the Aptos network team has been notified of any proof format or DST changes that affect the on-chain verifier.
+- [ ] **Bindings (FFI + Go)** and **Android JNI (FFI arm64-v8a)** CI jobs passed if Go bindings, FFI, or Android JNI changed.
+
+## Post-publish checklist (native FFI)
+
+After npm publish, **`release.yml` pushes `vX.Y.Z` automatically**; you do **not** need to tag by hand for the default path.
+
+1. Wait for **Release native FFI binaries** on the Actions tab (all matrix jobs + aggregate).
+2. Confirm the GitHub Release for **`vX.Y.Z`** lists the expected `.tar.gz` / `.zip` assets and **`SHA256SUMS`**.
+3. Optional: `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on Linux/macOS.
+
+**Manual fallback:** **Actions → Release native FFI binaries** (`workflow_dispatch`) if you need a draft rebuild without re-publishing npm.
+
+Go consumers download **`libaptos_confidential_asset_ffi`** from that GitHub Release (not npm). See [Native bindings](../bindings.md) for supported triples.
+
+## Rollback guidance
+
+- **npm**: Prefer a forward-fix **patch** release via Changesets. Avoid unpublishing except emergencies.
+- **GitHub FFI Release**: Edit or delete the draft/pre-release; publish a corrected workflow run with a higher patch if binaries were wrong.
+- **Git tags**: Do not rewrite public tags consumers may have fetched; release a new patch tag + npm version instead.
+
+## Development note: `CARGO_TARGET_DIR`
+
+Some environments set a global `CARGO_TARGET_DIR`, which hides build outputs under `rust/target/` (breaking Go cgo paths). From the repo root use [`scripts/build-ffi-for-bindings.sh`](../scripts/build-ffi-for-bindings.sh) or `unset CARGO_TARGET_DIR` before `cargo build`, as documented in [`docs/bindings.md`](../bindings.md).

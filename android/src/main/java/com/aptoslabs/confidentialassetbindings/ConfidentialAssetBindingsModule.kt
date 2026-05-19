@@ -15,10 +15,10 @@ class ConfidentialAssetBindingsModule : Module() {
 
   private val rustLoadError: String? by lazy {
     try {
-      System.loadLibrary("aptos_confidential_asset_mobile")
+      System.loadLibrary("aptos_confidential_asset_ffi")
       null
     } catch (error: UnsatisfiedLinkError) {
-      error.message ?: "Failed to load libaptos_confidential_asset_mobile"
+      error.message ?: "Failed to load libaptos_confidential_asset_ffi"
     }
   }
 

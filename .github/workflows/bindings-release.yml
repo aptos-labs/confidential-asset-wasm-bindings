@@ -1,0 +1,207 @@
+# Native staticlib + header — triggered by semver git tags (see `release.yml`, which pushes `v*`
+# after a successful npm publish). Optional `workflow_dispatch` for dry-runs / forks.
+name: Release native FFI binaries
+
+on:
+  push:
+    tags:
+      # Semver tags: v1.2.3, v1.2.3-rc.1, … (align with npm @aptos-labs/confidential-asset-bindings)
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver X.Y.Z without leading v (manual fallback; npm publish auto-pushes vX.Y.Z via release.yml)"
+        required: true
+        default: "1.0.0"
+      draft:
+        description: "Create GitHub Release as draft (manual runs)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: ffi-release-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-ffi-matrix:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+          # Intel macOS — disabled: runner/target currently unreliable for this build
+          # - target: x86_64-apple-darwin
+          #   os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust -> target"
+          key: ffi-${{ matrix.target }}
+
+      - name: Install musl tools (Linux musl x86_64)
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install GNU cross linker (Linux arm64 gnu)
+        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up Zig (aarch64-unknown-linux-musl cross link)
+        if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Install cargo-zigbuild (aarch64 musl)
+        if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
+        run: cargo install cargo-zigbuild --version 0.22.3 --locked
+
+      - name: rustup target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: cargo zigbuild (aarch64-unknown-linux-musl)
+        if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+        run: cargo zigbuild -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo.toml --target aarch64-unknown-linux-musl
+
+      - name: cargo build
+        if: ${{ matrix.target != 'aarch64-unknown-linux-musl' }}
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: cargo build -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo.toml --target ${{ matrix.target }}
+
+      - name: Stage artifact (Unix)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          T="${{ matrix.target }}"
+          OUT="dist/${T}"
+          mkdir -p "$OUT"
+          cp rust/ffi/include/aptos_confidential_asset.h "$OUT/"
+          cp "rust/target/${T}/release/libaptos_confidential_asset_ffi.a" "$OUT/"
+          (cd dist && tar czf "aptos_confidential_asset_ffi-${T}.tar.gz" "${T}")
+
+      - name: Stage artifact (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $t = "${{ matrix.target }}"
+          $out = "dist/$t"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item rust/ffi/include/aptos_confidential_asset.h $out/
+          Copy-Item "rust/target/$t/release/aptos_confidential_asset_ffi.lib" $out/
+          Compress-Archive -Path $out -DestinationPath "dist/aptos_confidential_asset_ffi-$t.zip" -Force
+
+      - name: Upload tarball (Unix)
+        if: ${{ runner.os != 'Windows' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffi-${{ matrix.target }}
+          path: dist/aptos_confidential_asset_ffi-${{ matrix.target }}.tar.gz
+
+      - name: Upload zip (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffi-${{ matrix.target }}
+          path: dist/aptos_confidential_asset_ffi-${{ matrix.target }}.zip
+
+  aggregate-and-release:
+    name: Aggregate checksums + GitHub Release
+    needs: build-ffi-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out (notes / attribution)
+        uses: actions/checkout@v6
+
+      - name: Resolve release tag and version
+        id: rel
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ inputs.version }}"
+            echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
+            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
+            echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            VER="${TAG#v}"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify root package.json matches release tag
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_VER="${{ steps.rel.outputs.ver }}"
+          PKG_VER="$(node -p "require('./package.json').version")"
+          if [[ "$PKG_VER" != "$TAG_VER" ]]; then
+            echo "error: git tag version '$TAG_VER' does not match root package.json version '$PKG_VER'" >&2
+            echo "FFI releases should use the same semver as npm after the Version Packages PR bumps package.json." >&2
+            exit 1
+          fi
+          echo "OK: package.json $PKG_VER matches tag $TAG_VER"
+
+      - name: Download all FFI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ffi-*
+          merge-multiple: true
+          path: release-files
+
+      - name: Write SHA256SUMS
+        run: |
+          set -euo pipefail
+          cd release-files
+          rm -f SHA256SUMS
+          shopt -s nullglob
+          for f in *.tar.gz *.zip; do
+            sha256sum "$f" >> SHA256SUMS
+          done
+          echo "--- SHA256SUMS ---"
+          cat SHA256SUMS
+
+      - name: Create GitHub Release with assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          name: aptos_confidential_asset_ffi ${{ steps.rel.outputs.tag }}
+          draft: ${{ steps.rel.outputs.draft == 'true' }}
+          generate_release_notes: true
+          body: |
+            Native FFI static libraries for `aptos_confidential_asset_ffi` (C ABI).
+
+            **Git tag:** `${{ steps.rel.outputs.tag }}` — align with npm **`@aptos-labs/confidential-asset-bindings@${{ steps.rel.outputs.ver }}`** when shipping both.
+
+            Includes `SHA256SUMS` for all attached archives. Header: `aptos_confidential_asset.h` inside each archive.
+
+            See [docs/bindings.md](https://github.com/${{ github.repository }}/blob/main/docs/bindings.md) for consumption (Go / C++).
+          files: |
+            release-files/*.tar.gz
+            release-files/*.zip
+            release-files/SHA256SUMS

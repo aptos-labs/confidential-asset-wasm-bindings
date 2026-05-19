@@ -62,6 +62,7 @@ dist/
 
 # Rust
 rust/target/
+.cache/
 
 # Native artifacts
 android/src/main/jniLibs/

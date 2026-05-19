@@ -1,18 +1,17 @@
-use crate::shared::{
-    sanitize_external_error, split_exact_chunks, validate_discrete_log_max_num_bits,
-    validate_flat_buffer_len, validate_range_num_bits, RANGE_PROOF_BATCH_ELEMENT_BYTES,
-};
-use aptos_confidential_asset_core::{
-    discrete_log::DiscreteLogSolver,
-    range_proof::{
-        batch_range_proof as core_batch_range_proof, batch_verify_proof as core_batch_verify_proof,
+use crate::{
+    bridge,
+    shared::{
+        validate_discrete_log_max_num_bits, validate_flat_buffer_len, validate_range_num_bits,
+        RANGE_PROOF_BATCH_ELEMENT_BYTES,
     },
 };
+use aptos_confidential_asset_core::discrete_log::DiscreteLogSolver;
 use jni::{
     objects::{JByteArray, JClass, JObject},
     sys::{jboolean, jbyteArray, jint, jlong, jobjectArray, jstring, JNI_FALSE, JNI_TRUE},
     JNIEnv,
 };
+use std::sync::Mutex;
 
 const U64_LE_BYTES: usize = 8;
 
@@ -147,42 +146,18 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
             return std::ptr::null_mut();
         }
     };
-    if let Err(error) = validate_flat_buffer_len(
-        blindings_flat.len(),
-        value_count,
-        RANGE_PROOF_BATCH_ELEMENT_BYTES,
-        "blindings_flat",
-    ) {
-        throw_java(&mut env, error);
-        return std::ptr::null_mut();
-    }
 
-    let rs = match split_exact_chunks(
-        &blindings_flat,
-        value_count,
-        RANGE_PROOF_BATCH_ELEMENT_BYTES,
-        "blindings_flat",
-    ) {
-        Ok(chunks) => chunks,
+    match bridge::batch_range_proof(&numeric_values, &blindings_flat, val_base, rand_base, num_bits)
+    {
+        Ok(result) => match new_byte_array_pair(&mut env, &result.proof, &result.comms_flat) {
+            Ok(value) => value,
+            Err(error) => {
+                throw_java(&mut env, error);
+                std::ptr::null_mut()
+            }
+        },
         Err(error) => {
             throw_java(&mut env, error);
-            return std::ptr::null_mut();
-        }
-    };
-
-    match core_batch_range_proof(numeric_values, rs, val_base, rand_base, num_bits) {
-        Ok(result) => {
-            let comms_flat: Vec<u8> = result.comms.into_iter().flatten().collect();
-            match new_byte_array_pair(&mut env, &result.proof, &comms_flat) {
-                Ok(value) => value,
-                Err(error) => {
-                    throw_java(&mut env, error);
-                    std::ptr::null_mut()
-                }
-            }
-        }
-        Err(error) => {
-            throw_java(&mut env, sanitize_external_error(error));
             std::ptr::null_mut()
         }
     }
@@ -256,24 +231,11 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
         }
     };
 
-    let comms = match split_exact_chunks(
-        &comms_flat,
-        comm_count,
-        RANGE_PROOF_BATCH_ELEMENT_BYTES,
-        "comms_flat",
-    ) {
-        Ok(chunks) => chunks,
-        Err(error) => {
-            throw_java(&mut env, error);
-            return JNI_FALSE;
-        }
-    };
-
-    match core_batch_verify_proof(proof, comms, val_base, rand_base, num_bits) {
+    match bridge::batch_verify_proof(proof, &comms_flat, val_base, rand_base, num_bits) {
         Ok(true) => JNI_TRUE,
         Ok(false) => JNI_FALSE,
         Err(error) => {
-            throw_java(&mut env, sanitize_external_error(error));
+            throw_java(&mut env, error);
             JNI_FALSE
         }
     }
@@ -284,7 +246,7 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    Box::into_raw(Box::new(DiscreteLogSolver::new())) as jlong
+    Box::into_raw(Box::new(Mutex::new(bridge::create_solver()))) as jlong
 }
 
 #[no_mangle]
@@ -294,7 +256,7 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
     pointer: jlong,
 ) {
     if pointer != 0 {
-        unsafe { drop(Box::from_raw(pointer as *mut DiscreteLogSolver)) };
+        unsafe { drop(Box::from_raw(pointer as *mut Mutex<DiscreteLogSolver>)) };
     }
 }
 
@@ -324,7 +286,11 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
         throw_java(&mut env, "received null solver pointer");
         return std::ptr::null_mut();
     }
-    let solver = unsafe { &*(pointer as *const DiscreteLogSolver) };
+    let mutex = unsafe { &*(pointer as *const Mutex<DiscreteLogSolver>) };
+    let solver = match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
 
     let y = match parse_jbyte_array(&mut env, y) {
         Ok(value) => value,
@@ -334,7 +300,7 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
         }
     };
 
-    match solver.solve(y, max_num_bits) {
+    match bridge::solver_solve(&*solver, y, max_num_bits) {
         Ok(result) => match env.new_string(result.to_string()) {
             Ok(value) => value.into_raw(),
             Err(error) => {
@@ -343,7 +309,7 @@ pub extern "system" fn Java_com_aptoslabs_confidentialassetbindings_Confidential
             }
         },
         Err(error) => {
-            throw_java(&mut env, sanitize_external_error(error));
+            throw_java(&mut env, error);
             std::ptr::null_mut()
         }
     }

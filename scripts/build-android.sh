@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUST_DIR="$ROOT_DIR/rust"
-CRATE="aptos_confidential_asset_mobile"
+CRATE="aptos_confidential_asset_ffi"
 OUTPUT_DIR="$ROOT_DIR/android/src/main/jniLibs"
 
 ANDROID_TARGETS=("aarch64-linux-android" "armv7-linux-androideabi" "x86_64-linux-android")

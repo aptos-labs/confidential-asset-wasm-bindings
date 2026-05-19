@@ -3,8 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUST_DIR="$ROOT_DIR/rust"
-CRATE="aptos_confidential_asset_mobile"
+CRATE="aptos_confidential_asset_ffi"
 LIB="lib${CRATE}.a"
+HEADERS_SRC="$ROOT_DIR/rust/ffi/include"
 HEADERS_DIR="$ROOT_DIR/ios/Rust/Headers"
 OUTPUT_DIR="$ROOT_DIR/ios/Rust/Binaries"
 FRAMEWORK_DIR="$OUTPUT_DIR/ConfidentialAsset.xcframework"
@@ -17,6 +18,9 @@ SIM_OUTPUT_DIR="$(mktemp -d)"
 trap 'rm -rf "$SIM_OUTPUT_DIR"' EXIT
 
 rustup target add "${ALL_TARGETS[@]}" >/dev/null
+
+mkdir -p "$HEADERS_DIR"
+cp "$HEADERS_SRC/aptos_confidential_asset.h" "$HEADERS_DIR/"
 
 cargo build \
   --manifest-path "$RUST_DIR/Cargo.toml" \

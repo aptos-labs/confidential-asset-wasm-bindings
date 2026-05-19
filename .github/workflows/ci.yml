@@ -95,3 +95,80 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  android-ffi-compile:
+    name: Android JNI (FFI arm64-v8a)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Setup tools
+        uses: jdx/mise-action@v4
+
+      - name: Install Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27d
+          link-to-sdk: true
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust -> target"
+          key: android-ffi-arm64
+
+      - name: rustup Android target
+        run: rustup target add aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Cross-compile FFI for Android (release)
+        working-directory: rust
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+        run: |
+          mkdir -p /tmp/aptos-ndk-staging
+          cargo ndk \
+            -t arm64-v8a \
+            -o /tmp/aptos-ndk-staging \
+            build -p aptos_confidential_asset_ffi --release
+
+  go-bindings-smoke:
+    name: Bindings (FFI + Go)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Setup tools
+        uses: jdx/mise-action@v4
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust -> target"
+
+      - name: Build FFI staticlib
+        run: cargo build -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo.toml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Go bindings (golden + smoke)
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          cd bindings/go
+          go test -v ./aptosconfidential/...
+          cd ../../examples/go
+          go test -v .

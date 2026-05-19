@@ -23,11 +23,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Root package is the whole repo for changesets. Require a changeset when the npm publish
+      # surface changes: app code, mobile glue, crypto core/WASM, or native FFI (Go + iOS + Android).
+      # Go-only paths (bindings/go, examples/go) and docs/CI-only edits stay out of the `npm` filter.
+      - uses: dorny/paths-filter@v3
+        id: npm_release
+        with:
+          filters: |
+            npm:
+              - package.json
+              - package-lock.json
+              - src/**
+              - android/**
+              - ios/**
+              - expo-module.config.json
+              - rust/core/**
+              - rust/wasm/**
+              - rust/ffi/**
+              - scripts/build-wasm.sh
+              - scripts/build-android.sh
+              - scripts/build-ios.sh
+
       - name: Setup tools
+        if: steps.npm_release.outputs.npm == 'true'
         uses: jdx/mise-action@v4
 
       - name: Install dependencies
+        if: steps.npm_release.outputs.npm == 'true'
         run: npm ci
 
       - name: Check changeset exists
+        if: steps.npm_release.outputs.npm == 'true'
         run: npx changeset status --since=origin/main

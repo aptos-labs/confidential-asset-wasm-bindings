@@ -1,0 +1,12 @@
+language = "C"
+pragma_once = false
+include_guard = "APTOS_CONFIDENTIAL_ASSET_H"
+documentation_style = "doxy"
+style = "both"
+
+[export]
+item_types = ["functions", "structs", "enums", "typedefs", "opaque"]
+include = ["abi", "ffi"]
+
+[parse]
+parse_deps = false
