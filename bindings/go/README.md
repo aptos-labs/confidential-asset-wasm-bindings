@@ -24,6 +24,15 @@ From repository root:
 
 This detects local `GOOS` / `GOARCH` (and Linux `gnu`/`musl`), downloads the matching asset from the latest GitHub Release, verifies `SHA256SUMS`, and installs it into `rust/target/...` paths expected by `cgo_*.go`. Only triples published by **Release native FFI binaries** are supported (see [docs/bindings.md](../../docs/bindings.md#prebuilt-triples-github-release-matrix)); Intel Mac and Windows arm64 require a local `cargo build`.
 
+On Linux musl, run Go commands with `-tags musl` after install:
+
+```bash
+cd bindings/go
+go test -tags musl ./aptosconfidential/...
+```
+
+`musl` is a custom build tag in this repo; the Go toolchain does not enable it automatically.
+
 To pin an explicit release tag:
 
 ```bash
@@ -64,3 +73,5 @@ Non-musl builds link `rust/target/release/libaptos_confidential_asset_ffi.a` (or
 | `cgo_windows_amd64.go` / `cgo_windows_arm64.go` | Windows MSVC (host `target/release`) |
 
 For **cross-compiled** Rust (different `--target`), copy or symlink the `.a` into `rust/target/release/` or add another `cgo_*.go` with the correct path.
+
+For musl Linux (`cgo_linux_*_musl.go`), pass `-tags musl` explicitly on `go build` / `go test`.

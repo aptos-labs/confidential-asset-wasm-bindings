@@ -160,4 +160,9 @@ if [[ "${target_triple}" == *"unknown-linux-gnu" || "${target_triple}" == *"appl
   echo "  ${ROOT}/rust/target/release/${lib_name}"
 fi
 echo "next:"
-echo "  cd bindings/go && go test ./aptosconfidential/..."
+if [[ "${target_triple}" == *"unknown-linux-musl" ]]; then
+  echo "  cd bindings/go && go test -tags musl ./aptosconfidential/..."
+  echo "  # musl is a custom Go build tag; Go does not enable it automatically"
+else
+  echo "  cd bindings/go && go test ./aptosconfidential/..."
+fi

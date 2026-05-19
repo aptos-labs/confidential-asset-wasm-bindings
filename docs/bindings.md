@@ -37,7 +37,7 @@ cargo build -p aptos_confidential_asset_ffi --release --manifest-path rust/Cargo
 
 - **Single implementation:** Go calls **`aptos_confidential_asset_ffi`** (same `aptos_confidential_asset_core` as WASM/JS). No duplicate Bulletproofs logic in Go.
 - **Golden fixture:** [`tests/fixtures/golden_batch_range_proof.json`](../tests/fixtures/golden_batch_range_proof.json) is produced by Rust (`emit_binding_golden_vector`). Go tests verify that fixture and round-trip prove→verify.
-- **Local check:** `./scripts/check-binding-parity.sh` runs Rust golden + Go golden tests (requires built FFI staticlib).
+- **Local check:** `./scripts/check-binding-parity.sh` runs Rust `cross_version_compat` + Go golden tests (requires built FFI staticlib).
 
 Regenerate the fixture:
 
@@ -54,6 +54,16 @@ Install a prebuilt static library from GitHub Releases (must match a published t
 ```bash
 ./scripts/install-go-ffi-from-release.sh vX.Y.Z
 ```
+
+On Linux musl, `musl` must be passed explicitly as a Go build tag:
+
+```bash
+APTOS_GO_LIBC=musl ./scripts/install-go-ffi-from-release.sh vX.Y.Z
+cd bindings/go
+go test -tags musl ./aptosconfidential/...
+```
+
+`musl` is a custom repository tag (`cgo_linux_*_musl.go`), not an automatic Go platform tag.
 
 ## CI
 
