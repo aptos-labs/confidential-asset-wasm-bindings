@@ -2,18 +2,6 @@ pub const RANGE_PROOF_BATCH_ELEMENT_BYTES: usize = 32;
 pub const DISCRETE_LOG_MAX_NUM_BITS_16: usize = 16;
 pub const DISCRETE_LOG_MAX_NUM_BITS_32: usize = 32;
 
-pub fn bytes_from_ptr<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], String> {
-    if len == 0 {
-        return Ok(&[]);
-    }
-
-    if ptr.is_null() {
-        return Err("received null pointer with non-zero length".to_string());
-    }
-
-    Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
-}
-
 pub fn validate_range_num_bits(num_bits: usize) -> Result<(), String> {
     match num_bits {
         8 | 16 | 32 | 64 => Ok(()),

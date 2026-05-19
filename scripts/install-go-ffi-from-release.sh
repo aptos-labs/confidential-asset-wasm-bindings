@@ -107,7 +107,7 @@ curl -fL --retry 3 --retry-delay 1 -o "${tmp_dir}/SHA256SUMS" "${sums_url}"
 (
   cd "${tmp_dir}"
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum -c SHA256SUMS --ignore-missing "${asset_name}"
+    awk -v f="${asset_name}" '$2 == f {print}' SHA256SUMS | sha256sum -c -
   elif command -v shasum >/dev/null 2>&1; then
     expected="$(awk -v f="${asset_name}" '$2 == f {print $1}' SHA256SUMS)"
     actual="$(shasum -a 256 "${asset_name}" | awk '{print $1}')"
@@ -118,6 +118,7 @@ curl -fL --retry 3 --retry-delay 1 -o "${tmp_dir}/SHA256SUMS" "${sums_url}"
 )
 
 echo "extracting ${asset_name}..."
+mkdir -p "${tmp_dir}/extract"
 if [[ "${archive_ext}" == "zip" ]]; then
   unzip -q "${tmp_dir}/${asset_name}" -d "${tmp_dir}/extract"
 else

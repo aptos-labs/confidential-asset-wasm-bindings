@@ -4,7 +4,7 @@ use crate::{
         ConfidentialAssetBoolResult, ConfidentialAssetByteBuffer, ConfidentialAssetBytesResult,
     },
     bridge,
-    shared::{bytes_from_ptr, validate_discrete_log_max_num_bits},
+    shared::validate_discrete_log_max_num_bits,
 };
 use aptos_confidential_asset_core::discrete_log::DiscreteLogSolver;
 use std::ffi::{c_char, c_void, CString};
@@ -45,6 +45,19 @@ fn err_bool(message: String) -> ConfidentialAssetBoolResult {
         value: false,
         error: buffer_from_vec(message.into_bytes()),
     }
+}
+
+fn bytes_from_ptr<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], String> {
+    if len == 0 {
+        return Ok(&[]);
+    }
+
+    if ptr.is_null() {
+        return Err("received null pointer with non-zero length".to_string());
+    }
+
+    // The C caller owns this memory. We only borrow it for the duration of this FFI call.
+    Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
 }
 
 #[no_mangle]
