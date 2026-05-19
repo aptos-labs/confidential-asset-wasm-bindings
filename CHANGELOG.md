@@ -1,5 +1,12 @@
 # @aptos-labs/confidential-asset-bindings
 
+## 1.1.2
+
+### Patch Changes
+
+- bbbfee6: Consolidate native bindings into `aptos_confidential_asset_ffi` (iOS/Android rebuild; Android loads `libaptos_confidential_asset_ffi`).
+- bbbfee6: Harden CI and release: require changesets for `rust/ffi`, add Android JNI compile smoke, publish `aarch64-unknown-linux-musl` FFI artifacts, verify FFI git tags match `package.json`, serialize native solver calls with a mutex, and unify npm publish with automatic `v*` tag + native FFI GitHub Release (`release.yml` → `bindings-release.yml`).
+
 ## 1.1.1
 
 ### Patch Changes
