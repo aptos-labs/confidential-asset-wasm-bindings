@@ -1,6 +1,6 @@
 {
   "name": "@aptos-labs/confidential-asset-bindings",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Bindings for Aptos confidential asset (discrete log + range proofs)",
   "main": "./dist/index.node.cjs",
   "types": "./dist/index.node.d.mts",
