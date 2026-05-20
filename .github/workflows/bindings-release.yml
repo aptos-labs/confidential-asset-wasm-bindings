@@ -187,6 +187,27 @@ jobs:
           echo "--- SHA256SUMS ---"
           cat SHA256SUMS
 
+      # changeset publish may push the tag before this workflow finishes starting; matrix
+      # builds take several minutes. Poll here so append_body never races an in-flight Release.
+      - name: Wait for Changesets GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          REPO="${{ github.repository }}"
+          for attempt in $(seq 1 36); do
+            if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+              echo "GitHub Release $TAG is ready (attempt ${attempt}/36)."
+              exit 0
+            fi
+            echo "Waiting for Changesets GitHub Release ${TAG}... (${attempt}/36)"
+            sleep 10
+          done
+          echo "error: GitHub Release ${TAG} not found after 6 minutes — cannot append FFI assets." >&2
+          exit 1
+
       - name: Write FFI appendix for existing Release
         run: |
           set -euo pipefail

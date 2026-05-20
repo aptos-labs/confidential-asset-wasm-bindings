@@ -51,13 +51,13 @@ jobs:
           publish: npm run release
           commit: "chore: version packages"
           title: "chore: version packages"
-          # Changesets creates the GitHub Release (CHANGELOG body). Tag push then runs
-          # bindings-release.yml to attach native staticlib archives to that same release.
+          # Changesets creates the GitHub Release (CHANGELOG body) during publish. Pushing the
+          # tag below triggers bindings-release.yml (separate workflow) to append FFI assets.
         env:
           GITHUB_TOKEN: ${{ steps.aptos-labs-bot-auth.outputs.token }}
 
-      # Single release flow: after npm publish, push semver tag so "Release native FFI binaries"
-      # (bindings-release.yml) builds and uploads prebuilt static libraries for the same version.
+      # After publish: ensure vX.Y.Z exists on origin (changeset publish may have pushed it
+      # already). Tag push starts bindings-release.yml — not an in-job call; see that workflow.
       - name: Push semver tag for native FFI release
         if: steps.changesets.outputs.published == 'true'
         run: |
