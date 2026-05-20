@@ -51,8 +51,8 @@ jobs:
           publish: npm run release
           commit: "chore: version packages"
           title: "chore: version packages"
-          # Native FFI workflow creates the GitHub Release for `v*` (staticlibs + SHA256SUMS).
-          createGithubReleases: false
+          # Changesets creates the GitHub Release (CHANGELOG body). Tag push then runs
+          # bindings-release.yml to attach native staticlib archives to that same release.
         env:
           GITHUB_TOKEN: ${{ steps.aptos-labs-bot-auth.outputs.token }}
 

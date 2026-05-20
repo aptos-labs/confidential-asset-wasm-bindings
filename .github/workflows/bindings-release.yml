@@ -1,5 +1,6 @@
-# Native staticlib + header — triggered by semver git tags (see `release.yml`, which pushes `v*`
-# after a successful npm publish). Optional `workflow_dispatch` for dry-runs / forks.
+# Native staticlib + header — runs after `release.yml` publishes npm and pushes `v*`.
+# Appends FFI download notes and binary archives to the existing Changesets GitHub Release
+# (same tag). Optional `workflow_dispatch` for dry-runs / forks.
 name: Release native FFI binaries
 
 on:
@@ -129,7 +130,7 @@ jobs:
           path: dist/aptos_confidential_asset_ffi-${{ matrix.target }}.zip
 
   aggregate-and-release:
-    name: Aggregate checksums + GitHub Release
+    name: Aggregate checksums + attach FFI to Release
     needs: build-ffi-matrix
     runs-on: ubuntu-latest
     steps:
@@ -186,21 +187,33 @@ jobs:
           echo "--- SHA256SUMS ---"
           cat SHA256SUMS
 
-      - name: Create GitHub Release with assets
+      - name: Write FFI appendix for existing Release
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
+          PKG="@aptos-labs/confidential-asset-bindings"
+          REPO="${{ github.repository }}"
+          {
+            echo "---"
+            echo ""
+            echo "### Native FFI (\`aptos_confidential_asset_ffi\`)"
+            echo ""
+            echo "Prebuilt C ABI static libraries for Go / C++ / Zig (attached below). Each archive includes \`aptos_confidential_asset.h\` and the static library for one target triple."
+            echo ""
+            echo "- **npm:** [\`${PKG}@${VER}\`](https://www.npmjs.com/package/${PKG}/v/${VER})"
+            echo "- **Checksums:** \`SHA256SUMS\`"
+            echo "- **Docs:** [docs/bindings.md](https://github.com/${REPO}/blob/${TAG}/docs/bindings.md)"
+          } > ffi-release-append.md
+          cat ffi-release-append.md
+
+      - name: Attach FFI binaries to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.rel.outputs.tag }}
-          name: aptos_confidential_asset_ffi ${{ steps.rel.outputs.tag }}
           draft: ${{ steps.rel.outputs.draft == 'true' }}
-          generate_release_notes: true
-          body: |
-            Native FFI static libraries for `aptos_confidential_asset_ffi` (C ABI).
-
-            **Git tag:** `${{ steps.rel.outputs.tag }}` — align with npm **`@aptos-labs/confidential-asset-bindings@${{ steps.rel.outputs.ver }}`** when shipping both.
-
-            Includes `SHA256SUMS` for all attached archives. Header: `aptos_confidential_asset.h` inside each archive.
-
-            See [docs/bindings.md](https://github.com/${{ github.repository }}/blob/main/docs/bindings.md) for consumption (Go / C++).
+          append_body: true
+          body_path: ffi-release-append.md
           files: |
             release-files/*.tar.gz
             release-files/*.zip

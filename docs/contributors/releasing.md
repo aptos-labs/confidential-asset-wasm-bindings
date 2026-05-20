@@ -59,9 +59,8 @@ This creates a Markdown file under `.changeset/`. Commit it alongside your code 
    - If there are no pending changesets, nothing happens.
 5. **Review and merge the "Version Packages" PR** when you are ready to publish. CI runs again.
 6. **On merge, `changesets/action` publishes to npm** by running `npm run release`. The package appears on the npm registry under `@aptos-labs/confidential-asset-bindings`.
-7. **When publish succeeds**, `release.yml` pushes annotated git tag **`vX.Y.Z`** (from `package.json`) to `origin`. That tag triggers **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** (**Release native FFI binaries**), which builds static libraries for all matrix targets and creates the **GitHub Release** with archives and `SHA256SUMS`. No separate manual tagging step is required for the normal path.
-
-The Changesets action is configured with **`createGithubReleases: false`** so the **single** GitHub Release for a version is the native-FFI one (npm changelog remains in `CHANGELOG.md` on `main`).
+7. **When publish succeeds**, Changesets creates the **GitHub Release** for **`vX.Y.Z`** with the usual **`### Patch Changes`** notes (same as before native FFI). `release.yml` then pushes the annotated tag to `origin` if it is not already there.
+8. The tag push triggers **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** (**Release native FFI binaries**), which builds static libraries and **appends** the FFI appendix plus `.tar.gz` / `.zip` / `SHA256SUMS` assets to that **same** GitHub Release. No second Release page and no manual tagging for the default path.
 
 ## GitHub App bot
 
@@ -90,7 +89,7 @@ After the "Version Packages" PR is merged and the publish step completes:
 
    Verify that `dist/` contains the ESM bundle, CJS bundle, type declarations, and `.wasm` file.
 
-4. **Native FFI:** confirm the **Release native FFI binaries** workflow completed for tag **`vX.Y.Z`** (triggered automatically after npm publish). Open the GitHub Release for that tag and verify `SHA256SUMS` and platform archives. Optionally run `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on a dev machine.
+4. **Native FFI:** confirm the **Release native FFI binaries** workflow completed for tag **`vX.Y.Z`**. Open the GitHub Release for that tag: the top should show Changesets changelog text; the bottom should include **Native FFI** notes plus `SHA256SUMS` and platform archives. Optionally run `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on a dev machine.
 
 ## Pre-publishing checklist
 
@@ -108,7 +107,7 @@ Before merging a "Version Packages" PR, confirm the following:
 After npm publish, **`release.yml` pushes `vX.Y.Z` automatically**; you do **not** need to tag by hand for the default path.
 
 1. Wait for **Release native FFI binaries** on the Actions tab (all matrix jobs + aggregate).
-2. Confirm the GitHub Release for **`vX.Y.Z`** lists the expected `.tar.gz` / `.zip` assets and **`SHA256SUMS`**.
+2. Confirm the GitHub Release for **`vX.Y.Z`** still shows the Changesets changelog and also lists the expected `.tar.gz` / `.zip` assets and **`SHA256SUMS`**.
 3. Optional: `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on Linux/macOS.
 
 **Manual fallback:** **Actions → Release native FFI binaries** (`workflow_dispatch`) if you need a draft rebuild without re-publishing npm.
