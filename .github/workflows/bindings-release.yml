@@ -1,16 +1,25 @@
-# Native staticlib + header — triggered by semver git tags (see `release.yml`, which pushes `v*`
-# after a successful npm publish). Optional `workflow_dispatch` for dry-runs / forks.
+# Native staticlib + header — invoked by `release.yml` after Changesets publish (workflow_call).
+# Appends FFI notes and archives to the existing Changesets GitHub Release. Manual
+# workflow_dispatch is for backfills only: a Release with changelog must already exist for vX.Y.Z.
+# Tag push does not trigger this workflow. Re-running append_body duplicates the Native FFI section.
 name: Release native FFI binaries
 
 on:
-  push:
-    tags:
-      # Semver tags: v1.2.3, v1.2.3-rc.1, … (align with npm @aptos-labs/confidential-asset-bindings)
-      - "v*.*.*"
+  workflow_call:
+    inputs:
+      version:
+        description: "Semver X.Y.Z without leading v (must match package.json on the release commit)"
+        required: true
+        type: string
+      draft:
+        description: "Create or update the GitHub Release as draft"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version:
-        description: "Semver X.Y.Z without leading v (manual fallback; npm publish auto-pushes vX.Y.Z via release.yml)"
+        description: "Semver X.Y.Z without leading v (manual backfill / dry-run)"
         required: true
         default: "1.0.0"
       draft:
@@ -19,7 +28,7 @@ on:
         default: true
 
 concurrency:
-  group: ffi-release-${{ github.repository }}-${{ github.ref }}
+  group: ffi-release-${{ github.repository }}-${{ inputs.version }}
   cancel-in-progress: false
 
 permissions:
@@ -129,7 +138,7 @@ jobs:
           path: dist/aptos_confidential_asset_ffi-${{ matrix.target }}.zip
 
   aggregate-and-release:
-    name: Aggregate checksums + GitHub Release
+    name: Aggregate checksums + attach FFI to Release
     needs: build-ffi-matrix
     runs-on: ubuntu-latest
     steps:
@@ -140,21 +149,12 @@ jobs:
         id: rel
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VER="${{ inputs.version }}"
-            echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
-            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
-            echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-            VER="${TAG#v}"
-            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
-            echo "draft=false" >> "$GITHUB_OUTPUT"
-          fi
+          VER="${{ inputs.version }}"
+          echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
+          echo "ver=${VER}" >> "$GITHUB_OUTPUT"
+          echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify root package.json matches release tag
-        if: github.event_name == 'push'
+      - name: Verify root package.json matches release version
         shell: bash
         run: |
           set -euo pipefail
@@ -186,21 +186,54 @@ jobs:
           echo "--- SHA256SUMS ---"
           cat SHA256SUMS
 
-      - name: Create GitHub Release with assets
+      # workflow_call runs only after Changesets publish in release.yml; manual dispatch may
+      # run without a prior Release — poll briefly before append_body.
+      - name: Wait for Changesets GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          REPO="${{ github.repository }}"
+          for attempt in $(seq 1 36); do
+            if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+              echo "GitHub Release $TAG is ready (attempt ${attempt}/36)."
+              exit 0
+            fi
+            echo "Waiting for GitHub Release ${TAG}... (${attempt}/36)"
+            sleep 10
+          done
+          echo "error: GitHub Release ${TAG} not found after 6 minutes — cannot append FFI assets." >&2
+          exit 1
+
+      - name: Write FFI appendix for existing Release
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
+          PKG="@aptos-labs/confidential-asset-bindings"
+          REPO="${{ github.repository }}"
+          {
+            echo "---"
+            echo ""
+            echo "### Native FFI (\`aptos_confidential_asset_ffi\`)"
+            echo ""
+            echo "Prebuilt C ABI static libraries for Go / C++ / Zig (attached below). Each archive includes \`aptos_confidential_asset.h\` and the static library for one target triple."
+            echo ""
+            echo "- **npm:** [\`${PKG}@${VER}\`](https://www.npmjs.com/package/${PKG}/v/${VER})"
+            echo "- **Checksums:** \`SHA256SUMS\`"
+            echo "- **Docs:** [docs/bindings.md](https://github.com/${REPO}/blob/${TAG}/docs/bindings.md)"
+          } > ffi-release-append.md
+          cat ffi-release-append.md
+
+      - name: Attach FFI binaries to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.rel.outputs.tag }}
-          name: aptos_confidential_asset_ffi ${{ steps.rel.outputs.tag }}
           draft: ${{ steps.rel.outputs.draft == 'true' }}
-          generate_release_notes: true
-          body: |
-            Native FFI static libraries for `aptos_confidential_asset_ffi` (C ABI).
-
-            **Git tag:** `${{ steps.rel.outputs.tag }}` — align with npm **`@aptos-labs/confidential-asset-bindings@${{ steps.rel.outputs.ver }}`** when shipping both.
-
-            Includes `SHA256SUMS` for all attached archives. Header: `aptos_confidential_asset.h` inside each archive.
-
-            See [docs/bindings.md](https://github.com/${{ github.repository }}/blob/main/docs/bindings.md) for consumption (Go / C++).
+          append_body: true
+          body_path: ffi-release-append.md
           files: |
             release-files/*.tar.gz
             release-files/*.zip

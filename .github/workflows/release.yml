@@ -12,6 +12,9 @@ jobs:
   release:
     name: Release
     runs-on: macos-latest
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      version: ${{ steps.release_meta.outputs.version }}
     permissions:
       id-token: write
       contents: write
@@ -51,14 +54,17 @@ jobs:
           publish: npm run release
           commit: "chore: version packages"
           title: "chore: version packages"
-          # Native FFI workflow creates the GitHub Release for `v*` (staticlibs + SHA256SUMS).
-          createGithubReleases: false
+          # Changesets creates the GitHub Release (CHANGELOG body) during publish.
         env:
           GITHUB_TOKEN: ${{ steps.aptos-labs-bot-auth.outputs.token }}
 
-      # Single release flow: after npm publish, push semver tag so "Release native FFI binaries"
-      # (bindings-release.yml) builds and uploads prebuilt static libraries for the same version.
-      - name: Push semver tag for native FFI release
+      - name: Export published package version
+        id: release_meta
+        if: steps.changesets.outputs.published == 'true'
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      # Git tag for consumers (Go module pin, release page). FFI attach is workflow_call below.
+      - name: Push semver git tag
         if: steps.changesets.outputs.published == 'true'
         run: |
           set -euo pipefail
@@ -67,15 +73,28 @@ jobs:
           git pull --ff-only origin "${BRANCH}"
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if git rev-parse "${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists locally; skipping."
-            exit 0
-          fi
           if git ls-remote --tags origin "refs/tags/${TAG}" | grep -qF "refs/tags/${TAG}"; then
             echo "Tag ${TAG} already exists on origin; skipping."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "chore(release): ${TAG} (npm + native FFI)"
-          git push origin "refs/tags/${TAG}"
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} exists locally (e.g. from changeset publish); pushing to origin."
+            git push origin "refs/tags/${TAG}"
+          else
+            git tag -a "${TAG}" -m "chore(release): ${TAG} (npm + native FFI)"
+            git push origin "refs/tags/${TAG}"
+          fi
+
+  native-ffi-release:
+    name: Native FFI release
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/bindings-release.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      draft: false
+    secrets: inherit

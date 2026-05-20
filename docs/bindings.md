@@ -6,7 +6,7 @@ Experimental **Go** bindings over the same cryptographic core as the npm package
 
 - **npm / JS** remains the primary semver surface (`package.json`).
 - **Go module**: `github.com/aptos-labs/confidential-asset-bindings/bindings/go` (use your fork path with `replace` when needed).
-- **Native FFI static libraries** ship on **GitHub Releases** (not npm). After each successful **npm** publish, [`release.yml`](../.github/workflows/release.yml) pushes git tag **`vX.Y.Z`**, which runs **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** and publishes the staticlibs + `SHA256SUMS` for the same semver as `package.json` (no separate manual tagging in the default flow).
+- **Native FFI static libraries** ship on **GitHub Releases** (not npm). After each successful **npm** publish, [`release.yml`](../.github/workflows/release.yml) calls **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** (`workflow_call`) to append staticlibs + `SHA256SUMS` to the Changesets Release for the same semver as `package.json`. It also pushes git tag **`vX.Y.Z`** for version pins (tag push does **not** start the FFI workflow).
 
 ## Rust layout
 
@@ -73,9 +73,9 @@ Repository admins should mark **Bindings (FFI + Go)** and **Android JNI (FFI arm
 
 ## Releases (FFI binaries)
 
-**One release path:** merging **Version Packages** triggers `npm run release` on `main`; when publish succeeds, **`release.yml`** pushes **`vX.Y.Z`**, which runs **Release native FFI binaries** and creates the GitHub Release with prebuilt `libaptos_confidential_asset_ffi` archives and **`SHA256SUMS`**. Changelog for npm remains in `CHANGELOG.md`; the GitHub Release is the native-FFI asset bundle.
+**Normal path:** merging **Version Packages** runs **`release.yml`** on `main`: Changesets publishes to npm and creates the GitHub Release (changelog in the Release body, also in `CHANGELOG.md`); the same workflow run calls **`bindings-release.yml`** via **`workflow_call`** to append prebuilt `libaptos_confidential_asset_ffi` archives and **`SHA256SUMS`**. Git tag **`vX.Y.Z`** is pushed for version pins — tag push does **not** start the FFI workflow.
 
-Use **Actions → Release native FFI binaries** (`workflow_dispatch`) only as a fallback (e.g. draft rebuild) — see [releasing.md](contributors/releasing.md).
+**Manual fallback:** **Actions → Release native FFI binaries** (`workflow_dispatch`) only when a Release for **`vX.Y.Z`** already exists — see [releasing.md](contributors/releasing.md).
 
 ### Prebuilt triples (GitHub Release matrix)
 
