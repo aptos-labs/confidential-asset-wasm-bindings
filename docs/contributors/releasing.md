@@ -89,7 +89,7 @@ After the "Version Packages" PR is merged and the publish step completes:
 
    Verify that `dist/` contains the ESM bundle, CJS bundle, type declarations, and `.wasm` file.
 
-4. **Native FFI:** confirm the **Release native FFI binaries** workflow completed for tag **`vX.Y.Z`**. Open the GitHub Release for that tag: the top should show Changesets changelog text; the bottom should include **Native FFI** notes plus `SHA256SUMS` and platform archives. Optionally run `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on a dev machine.
+4. **Native FFI:** on the same **Release** workflow run, confirm the **Native FFI release** job completed. Open the GitHub Release for **`vX.Y.Z`**: Changesets changelog at the top, **Native FFI** notes and `SHA256SUMS` / platform archives below. Optionally run `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on a dev machine.
 
 ## Pre-publishing checklist
 

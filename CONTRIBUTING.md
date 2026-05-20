@@ -75,7 +75,7 @@ GitHub Actions run in the repository where they execute. On a fork, configure **
 
 If Changesets cannot open PRs, add secret **`CHANGESETS_GITHUB_TOKEN`** (PAT with `repo`, or fine-grained Contents + Pull requests write). The Release workflow uses `secrets.CHANGESETS_GITHUB_TOKEN || github.token`.
 
-To **ship native FFI artifacts for Go** after an npm release: no manual step is required — **`release.yml`** calls **Release native FFI binaries** (`bindings-release.yml` via `workflow_call`) after Changesets publish, then pushes **`vX.Y.Z`**. See [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
+To **ship native FFI artifacts for Go** after an npm release: no manual step is required — one **`release.yml`** run publishes via Changesets (npm + GitHub Release changelog), pushes **`vX.Y.Z`** for git/Go pins, then calls **Release native FFI binaries** (`bindings-release.yml` via `workflow_call`) to append staticlibs. Tag push does not start the FFI workflow. See [`docs/contributors/releasing.md`](docs/contributors/releasing.md).
 
 ## Coding standards
 
