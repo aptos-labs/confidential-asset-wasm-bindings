@@ -60,7 +60,7 @@ This creates a Markdown file under `.changeset/`. Commit it alongside your code 
 5. **Review and merge the "Version Packages" PR** when you are ready to publish. CI runs again.
 6. **On merge, `changesets/action` publishes to npm** by running `npm run release`. The package appears on the npm registry under `@aptos-labs/confidential-asset-bindings`.
 7. **When publish succeeds**, Changesets creates the **GitHub Release** for **`vX.Y.Z`** with the usual **`### Patch Changes`** notes (same as before native FFI). `release.yml` pushes the annotated git tag to `origin` if it is not already there (for version pins; **does not** trigger FFI).
-8. The same **`release.yml`** run then calls **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** via **`workflow_call`** (**Native FFI release** job), which builds static libraries and **appends** the FFI appendix plus `.tar.gz` / `.zip` / `SHA256SUMS` to that **same** GitHub Release — only after the Changesets Release step has finished. No second Release page.
+8. The same **`release.yml`** run then calls **[`bindings-release.yml`](../../.github/workflows/bindings-release.yml)** via **`workflow_call`** (**Native FFI release** job), which builds static libraries and **appends** the FFI appendix plus `.tar.gz` / `.zip` / `SHA256SUMS` to that **same** GitHub Release — only after the Changesets Release step has finished. No second Release page.
 
 ## GitHub App bot
 
@@ -110,7 +110,7 @@ After npm publish, **`release.yml` pushes `vX.Y.Z` and invokes Native FFI releas
 2. Confirm the GitHub Release for **`vX.Y.Z`** still shows the Changesets changelog and also lists the expected `.tar.gz` / `.zip` assets and **`SHA256SUMS`**.
 3. Optional: `./scripts/install-go-ffi-from-release.sh vX.Y.Z` on Linux/macOS.
 
-**Manual fallback:** **Actions → Release native FFI binaries** (`workflow_dispatch`) if you need a draft rebuild without re-publishing npm.
+**Manual fallback:** **Actions → Release native FFI binaries** (`workflow_dispatch`) only when a GitHub Release for **`vX.Y.Z`** already exists (create it with Changesets changelog notes first, e.g. `gh release create`). The workflow appends FFI assets; it does not replace Changesets. **Re-running** the workflow duplicates the **Native FFI** section in the Release body — edit manually or avoid duplicate dispatches.
 
 Go consumers download **`libaptos_confidential_asset_ffi`** from that GitHub Release (not npm). See [Native bindings](../bindings.md) for supported triples.
 

@@ -61,7 +61,7 @@ jobs:
       - name: Export published package version
         id: release_meta
         if: steps.changesets.outputs.published == 'true'
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       # Git tag for consumers (Go module pin, release page). FFI attach is workflow_call below.
       - name: Push semver git tag
@@ -91,6 +91,8 @@ jobs:
     name: Native FFI release
     needs: release
     if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
     uses: ./.github/workflows/bindings-release.yml
     with:
       version: ${{ needs.release.outputs.version }}

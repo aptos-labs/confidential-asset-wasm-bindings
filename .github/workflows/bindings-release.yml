@@ -1,6 +1,7 @@
 # Native staticlib + header — invoked by `release.yml` after Changesets publish (workflow_call).
 # Appends FFI notes and archives to the existing Changesets GitHub Release. Manual
-# workflow_dispatch remains for backfills / dry-runs. Tag push does not trigger this workflow.
+# workflow_dispatch is for backfills only: a Release with changelog must already exist for vX.Y.Z.
+# Tag push does not trigger this workflow. Re-running append_body duplicates the Native FFI section.
 name: Release native FFI binaries
 
 on:
@@ -154,7 +155,6 @@ jobs:
           echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
 
       - name: Verify root package.json matches release version
-        if: github.event_name == 'workflow_call'
         shell: bash
         run: |
           set -euo pipefail
