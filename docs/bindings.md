@@ -6,7 +6,7 @@ Experimental **Go** bindings over the same cryptographic core as the npm package
 
 - **npm / JS** remains the primary semver surface (`package.json`).
 - **Go module**: `github.com/aptos-labs/confidential-asset-bindings/bindings/go` (use your fork path with `replace` when needed).
-- **Native FFI static libraries** ship on **GitHub Releases** (not npm). After each successful **npm** publish, [`release.yml`](../.github/workflows/release.yml) pushes git tag **`vX.Y.Z`**, which runs **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** and publishes the staticlibs + `SHA256SUMS` for the same semver as `package.json` (no separate manual tagging in the default flow).
+- **Native FFI static libraries** ship on **GitHub Releases** (not npm). After each successful **npm** publish, [`release.yml`](../.github/workflows/release.yml) calls **[`bindings-release.yml`](../.github/workflows/bindings-release.yml)** (`workflow_call`) to append staticlibs + `SHA256SUMS` to the Changesets Release for the same semver as `package.json`. It also pushes git tag **`vX.Y.Z`** for version pins (tag push does **not** start the FFI workflow).
 
 ## Rust layout
 

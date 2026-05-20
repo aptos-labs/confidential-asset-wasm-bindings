@@ -1,17 +1,24 @@
-# Native staticlib + header — runs after `release.yml` publishes npm and pushes `v*`.
-# Appends FFI download notes and binary archives to the existing Changesets GitHub Release
-# (same tag). Optional `workflow_dispatch` for dry-runs / forks.
+# Native staticlib + header — invoked by `release.yml` after Changesets publish (workflow_call).
+# Appends FFI notes and archives to the existing Changesets GitHub Release. Manual
+# workflow_dispatch remains for backfills / dry-runs. Tag push does not trigger this workflow.
 name: Release native FFI binaries
 
 on:
-  push:
-    tags:
-      # Semver tags: v1.2.3, v1.2.3-rc.1, … (align with npm @aptos-labs/confidential-asset-bindings)
-      - "v*.*.*"
+  workflow_call:
+    inputs:
+      version:
+        description: "Semver X.Y.Z without leading v (must match package.json on the release commit)"
+        required: true
+        type: string
+      draft:
+        description: "Create or update the GitHub Release as draft"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version:
-        description: "Semver X.Y.Z without leading v (manual fallback; npm publish auto-pushes vX.Y.Z via release.yml)"
+        description: "Semver X.Y.Z without leading v (manual backfill / dry-run)"
         required: true
         default: "1.0.0"
       draft:
@@ -20,7 +27,7 @@ on:
         default: true
 
 concurrency:
-  group: ffi-release-${{ github.repository }}-${{ github.ref }}
+  group: ffi-release-${{ github.repository }}-${{ inputs.version }}
   cancel-in-progress: false
 
 permissions:
@@ -141,21 +148,13 @@ jobs:
         id: rel
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VER="${{ inputs.version }}"
-            echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
-            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
-            echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-            VER="${TAG#v}"
-            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-            echo "ver=${VER}" >> "$GITHUB_OUTPUT"
-            echo "draft=false" >> "$GITHUB_OUTPUT"
-          fi
+          VER="${{ inputs.version }}"
+          echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
+          echo "ver=${VER}" >> "$GITHUB_OUTPUT"
+          echo "draft=${{ inputs.draft }}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify root package.json matches release tag
-        if: github.event_name == 'push'
+      - name: Verify root package.json matches release version
+        if: github.event_name == 'workflow_call'
         shell: bash
         run: |
           set -euo pipefail
@@ -187,10 +186,10 @@ jobs:
           echo "--- SHA256SUMS ---"
           cat SHA256SUMS
 
-      # changeset publish may push the tag before this workflow finishes starting; matrix
-      # builds take several minutes. Poll here so append_body never races an in-flight Release.
+      # workflow_call runs only after Changesets publish in release.yml; manual dispatch may
+      # run without a prior Release — poll briefly before append_body.
       - name: Wait for Changesets GitHub Release
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -202,7 +201,7 @@ jobs:
               echo "GitHub Release $TAG is ready (attempt ${attempt}/36)."
               exit 0
             fi
-            echo "Waiting for Changesets GitHub Release ${TAG}... (${attempt}/36)"
+            echo "Waiting for GitHub Release ${TAG}... (${attempt}/36)"
             sleep 10
           done
           echo "error: GitHub Release ${TAG} not found after 6 minutes — cannot append FFI assets." >&2
