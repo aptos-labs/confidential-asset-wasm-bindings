@@ -67,15 +67,16 @@ jobs:
           git pull --ff-only origin "${BRANCH}"
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if git rev-parse "${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists locally; skipping."
-            exit 0
-          fi
           if git ls-remote --tags origin "refs/tags/${TAG}" | grep -qF "refs/tags/${TAG}"; then
             echo "Tag ${TAG} already exists on origin; skipping."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "chore(release): ${TAG} (npm + native FFI)"
-          git push origin "refs/tags/${TAG}"
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} exists locally (e.g. from changeset publish); pushing to origin."
+            git push origin "refs/tags/${TAG}"
+          else
+            git tag -a "${TAG}" -m "chore(release): ${TAG} (npm + native FFI)"
+            git push origin "refs/tags/${TAG}"
+          fi
